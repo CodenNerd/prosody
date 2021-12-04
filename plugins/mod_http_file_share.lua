@@ -568,9 +568,21 @@ module:weekly("Calculate total storage usage", function()
 	local iter = assert(uploads:find(nil));
 
 	local count, sum = 0, 0;
-	for _, file in iter do
-		sum = sum + tonumber(file.attr.size);
+	for slot_id, file in iter do
 		count = count + 1;
+		local expected_size = tonumber(file.attr.size);
+		local filename = get_filename(slot_id);
+		local actual_size, err = lfs.attributes(filename, "size");
+		if not actual_size then
+			module:log("warn", "Missing file for upload slot %s: %s", slot_id, err);
+			count = count - 1;
+		elseif actual_size ~= expected_size then
+			module:log("warn", "Size mismatch for upload slot %s, expected %s, actual %s", slot_id, B(expected_size), B(actual_size));
+			-- TODO delete?
+			sum = sum + actual_size;
+		else
+			sum = sum + expected_size;
+		end
 	end
 
 	module:log("info", "Uploaded files total: %s in %d files", B(sum), count);
