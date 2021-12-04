@@ -18,6 +18,7 @@ local urlencode = require "prosody.util.http".urlencode;
 local dt = require "prosody.util.datetime";
 local hi = require "prosody.util.human.units";
 local cache = require "prosody.util.cache";
+local join_path = require "util.paths".join;
 local lfs = require "lfs";
 
 local unknown = math.abs(0/0);
@@ -568,11 +569,14 @@ module:weekly("Calculate total storage usage", function()
 	local iter = assert(uploads:find(nil));
 
 	local count, sum = 0, 0;
+	local expected_filenames = {};
 	for slot_id, file in iter do
 		count = count + 1;
+
 		local expected_size = tonumber(file.attr.size);
 		local filename = get_filename(slot_id);
 		local actual_size, err = lfs.attributes(filename, "size");
+		expected_filenames[filename] = true;
 		if not actual_size then
 			module:log("warn", "Missing file for upload slot %s: %s", slot_id, err);
 			count = count - 1;
@@ -582,6 +586,15 @@ module:weekly("Calculate total storage usage", function()
 			sum = sum + actual_size;
 		else
 			sum = sum + expected_size;
+		end
+	end
+
+	local upload_dir = dm.getpath("", module.host, module.name, ""):gsub("/[^/]*$", "");
+	for file in lfs.dir(upload_dir) do
+		local file_path = join_path(upload_dir, file);
+		if file ~= "." and file ~= ".." and not expected_filenames[file_path] then
+			local mode, err = lfs.attributes(file_path, "mode");
+			module:log("warn", "Unexpected %s in upload storage: %s", mode or "file", err or file);
 		end
 	end
 
