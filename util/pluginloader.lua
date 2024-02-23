@@ -10,10 +10,9 @@
 local dir_sep, path_sep = package.config:match("^(%S+)%s(%S+)");
 local lua_version = _VERSION:match(" (.+)$");
 local plugin_dir = {};
-for path in (CFG_PLUGINDIR or "./plugins/"):gsub("[/\\]", dir_sep):gmatch("[^"..path_sep.."]+") do
-	path = path..dir_sep; -- add path separator to path end
-	path = path:gsub(dir_sep..dir_sep.."+", dir_sep); -- coalesce multiple separators
-	plugin_dir[#plugin_dir + 1] = path;
+for path in (CFG_PLUGINDIR or "./plugins/"):gsub("[/\\]", dir_sep):gmatch("[^" .. path_sep .. "]+") do
+	plugin_dir[#plugin_dir + 1] = (path .. dir_sep) -- add path separator to path end
+		:gsub(dir_sep .. dir_sep .. "+", dir_sep); -- coalesce multiple separators
 end
 
 local io_open = io.open;

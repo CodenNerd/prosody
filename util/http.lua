@@ -45,8 +45,8 @@ end
 local function formdecode(s)
 	if not s:match("=") then return urldecode(s); end
 	local r = {};
-	for k, v in s:gmatch("([^=&]*)=([^&]*)") do
-		k, v = k:gsub("%+", "%%20"), v:gsub("%+", "%%20");
+	for uk, uv in s:gmatch("([^=&]*)=([^&]*)") do
+		local k, v = uk:gsub("%+", "%%20"), uv:gsub("%+", "%%20");
 		k, v = urldecode(k), urldecode(v);
 		t_insert(r, { name = k, value = v });
 		r[k] = v;

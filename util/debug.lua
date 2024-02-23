@@ -145,7 +145,8 @@ local function _traceback(thread, message, level)
 	local last_source_desc;
 
 	local lines = {};
-	for nlevel, current_level in ipairs(levels) do
+	for n, current_level in ipairs(levels) do
+		local nlevel = n-1;
 		local info = current_level.info;
 		local line;
 		local func_type = info.namewhat.." ";
@@ -171,7 +172,6 @@ local function _traceback(thread, message, level)
 			last_source_desc = source_desc;
 			table.insert(lines, "\t "..build_source_boundary_marker(last_source_desc));
 		end
-		nlevel = nlevel-1;
 		table.insert(lines, "\t"..(nlevel==0 and ">" or " ")..getstring(styles.level_num, "("..nlevel..") ")..line);
 		local npadding = (" "):rep(#tostring(nlevel));
 		if current_level.locals then

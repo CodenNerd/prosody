@@ -620,6 +620,7 @@ wrapconnection = function( server, listeners, socket, ip, serverport, clientport
 					_sendlistlen = ( wrote and removesocket( _sendlist, client, _sendlistlen ) ) or _sendlistlen
 					_readlistlen = ( read and removesocket( _readlist, client, _readlistlen ) ) or _readlistlen
 					read, wrote = nil, nil
+					local _
 					_, err = client:dohandshake( )
 					if not err then
 						out_put( "server.lua: ssl handshake done" )

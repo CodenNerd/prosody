@@ -86,9 +86,9 @@ local function parser(data, handlers, ns_separator)
 		local newattr, n = {}, 0;
 		for k,v in pairs(attr) do
 			n = n+1;
-			k = apply_ns(k);
-			newattr[n] = k;
-			newattr[k] = v;
+			local k_ = apply_ns(k);
+			newattr[n] = k_;
+			newattr[k_] = v;
 		end
 		tag = apply_ns(tag, true);
 		ns[0] = tag;

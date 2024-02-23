@@ -701,10 +701,10 @@ function resolver:adddefaultnameservers()    -- - - - -  adddefaultnameservers
 		local resolv_conf = io.open("/etc/resolv.conf");
 		if resolv_conf then
 			for line in resolv_conf:lines() do
-				line = line:gsub("#.*$", "")
+				local nameserver = line:gsub("#.*$", "")
 					:match('^%s*nameserver%s+([%x:%.]*%%?%S*)%s*$');
-				if line then
-					local ip = new_ip(line);
+				if nameserver then
+					local ip = new_ip(nameserver);
 					if ip then
 						self:addnameserver(ip.addr);
 					end

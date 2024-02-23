@@ -95,8 +95,7 @@ local csscolors = {
 }
 for colorname, rgb in pairs(csscolors) do
 	stylemap[colorname] = stylemap[colorname] or stylemap[rgb];
-	colorname, rgb = colorname .. " background", rgb .. " background"
-	stylemap[colorname] = stylemap[colorname] or stylemap[rgb];
+	stylemap[colorname .. " background"] = stylemap[colorname .. " background"] or stylemap[rgb .. " background"];
 end
 
 local function getstyle(...)

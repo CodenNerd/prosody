@@ -251,10 +251,10 @@ handlers.roster = {
 				usere:add_child(roster);
 				for contact_jid, item in pairs(data) do
 					if contact_jid ~= false then
-						contact_jid = jid_bare(jid_prep(contact_jid));
-						if contact_jid ~= user_jid then -- Skip self-contacts
+						local bare_contact_jid = jid_bare(jid_prep(contact_jid));
+						if bare_contact_jid ~= user_jid then -- Skip self-contacts
 							roster:tag("item", {
-								jid = contact_jid,
+								jid = bare_contact_jid,
 								subscription = item.subscription,
 								ask = item.ask,
 								name = item.name,

@@ -461,15 +461,15 @@ function commands.about(arg)
 		local version_field = alternate_version_fields[name] or "_VERSION";
 		if type(module) == "table" and rawget(module, version_field)
 			and name ~= "_G" and not name:match("%.") then
-			name = friendly_names[name] or name;
-			if #name > longest_name then
-				longest_name = #name;
+			local friendly_name = friendly_names[name] or name;
+			if #friendly_name > longest_name then
+				longest_name = #friendly_name;
 			end
 			local mod_version = module[version_field];
-			if tostring(mod_version):sub(1, #name+1) == name .. " " then
-				mod_version = mod_version:sub(#name+2);
+			if tostring(mod_version):sub(1, #friendly_name+1) == friendly_name .. " " then
+				mod_version = mod_version:sub(#friendly_name+2);
 			end
-			module_versions[name] = mod_version;
+			module_versions[friendly_name] = mod_version;
 		end
 	end
 	if lunbound then

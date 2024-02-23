@@ -29,8 +29,8 @@ local function sanitize_path(path) --> util.paths or util.http?
 	local out = {};
 
 	local c = 0;
-	for component in path:gmatch("([^/]+)") do
-		component = urldecode(component);
+	for urlcomponent in path:gmatch("([^/]+)") do
+		local component = urldecode(urlcomponent);
 		if component:find(forbidden_chars_pattern) then
 			return nil;
 		elseif component == ".." then
