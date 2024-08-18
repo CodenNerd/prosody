@@ -295,6 +295,7 @@ function engine:transaction(...)
 	end
 	return ok, ret;
 end
+engine.write_transaction = engine.transaction; -- TODO BEGIN IMMEDATE
 function engine:_create_index(index)
 	local sql = "CREATE INDEX IF NOT EXISTS \""..index.name.."\" ON \""..index.table.."\" (";
 	for i=1,#index do

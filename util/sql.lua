@@ -244,6 +244,7 @@ function engine:transaction(...)
 	end
 	return ok, ret, b, c;
 end
+engine.write_transaction = engine.transaction; -- TODO can you signal intent to write upfront in pg or mysql?
 function engine:_create_index(index)
 	local sql = "CREATE INDEX \""..index.name.."\" ON \""..index.table.."\" (";
 	if self.params.driver ~= "MySQL" then
