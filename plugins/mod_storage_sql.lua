@@ -161,7 +161,7 @@ function keyval_store:get(username)
 	return result;
 end
 function keyval_store:set(username, data)
-	return engine:transaction(keyval_store_set, data, username, self.store);
+	return engine:write_transaction(keyval_store_set, data, username, self.store);
 end
 function keyval_store:users()
 	local ok, result = engine:transaction(function()
@@ -219,7 +219,7 @@ function map_store:set(username, key, data)
 	return self:set_keys(username, { [key] = data });
 end
 function map_store:set_keys(username, keydatas)
-	local ok, result = engine:transaction(function()
+	local ok, result = engine:write_transaction(function()
 		local delete_sql = [[
 		DELETE FROM "prosody"
 		WHERE "host"=? AND "user"=? AND "store"=? AND "key"=?;
@@ -303,7 +303,7 @@ function map_store:delete_all(key)
 	if type(key) ~= "string" or key == "" then
 		return nil, "delete_all only supports non-empty string keys";
 	end
-	local ok, result = engine:transaction(function()
+	local ok, result = engine:write_transaction(function()
 		local delete_sql = [[
 		DELETE FROM "prosody"
 		WHERE "host"=? AND "store"=? AND "key"=?;
@@ -333,7 +333,7 @@ function archive_store:append(username, key, value, when, with)
 	if archive_item_limit then
 		if not item_count then
 			item_count_cache_miss();
-			local ok, ret = engine:transaction(function()
+			local ok, ret = engine:write_transaction(function()
 				local count_sql = [[
 				SELECT COUNT(*) FROM "prosodyarchive"
 				WHERE "host"=? AND "user"=? AND "store"=?;
@@ -367,7 +367,7 @@ function archive_store:append(username, key, value, when, with)
 		when = math.floor(when);
 	end
 	with = with or "";
-	local ok, ret = engine:transaction(function()
+	local ok, ret = engine:write_transaction(function()
 		local delete_sql = [[
 		DELETE FROM "prosodyarchive"
 		WHERE "host"=? AND "user"=? AND "store"=? AND "key"=?;
@@ -542,7 +542,7 @@ end
 
 function archive_store:set(username, key, new_value, new_when, new_with)
 	local user,store = username,self.store;
-	local ok, result = engine:transaction(function ()
+	local ok, result = engine:write_transaction(function ()
 
 		local update_query = [[
 		UPDATE "prosodyarchive"
@@ -621,7 +621,7 @@ end
 function archive_store:delete(username, query)
 	query = query or {};
 	local user,store = username,self.store;
-	local ok, stmt = engine:transaction(function()
+	local ok, stmt = engine:write_transaction(function()
 		local sql_query = "DELETE FROM \"prosodyarchive\" WHERE %s;";
 		local args = { host, user or "", store, };
 		local where = { "\"host\" = ?", "\"user\" = ?", "\"store\" = ?", };
@@ -751,7 +751,7 @@ function driver:stores(username)
 end
 
 function driver:purge(username)
-	return engine:transaction(function()
+	return engine:write_transaction(function()
 		engine:delete("DELETE FROM \"prosody\" WHERE \"host\"=? AND \"user\"=?", host, username);
 		engine:delete("DELETE FROM \"prosodyarchive\" WHERE \"host\"=? AND \"user\"=?", host, username);
 	end);
