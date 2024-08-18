@@ -261,41 +261,53 @@ function engine:_(word)
 	if ret ~= lsqlite3.OK then return nil, self.conn:errmsg(); end
 	return true;
 end
-function engine:_transaction(func, ...)
+function engine:_transaction(rw, func, ...)
 	if not self.conn then
 		local a,b = self:connect();
 		if not a then return a,b; end
 	end
 	--assert(not self.__transaction, "Recursive transactions not allowed");
-	local ok, err = self:_"BEGIN";
+	local begin = rw and "BEGIN IMMEDIATE" or "BEGIN";
+	local ok, err = self:_(begin);
 	if not ok then return ok, err; end
 	self.__transaction = true;
 	local success, a, b, c = xpcall(func, debug_traceback, ...);
 	self.__transaction = nil;
 	if success then
-		log("debug", "SQL transaction success [%s]", tostring(func));
+		log("debug", "SQL %s transaction success [%s]", rw and "write" or "read", tostring(func));
 		local ok, err = self:_"COMMIT";
 		if not ok then return ok, err; end -- commit failed
 		return success, a, b, c;
 	else
-		log("debug", "SQL transaction failure [%s]: %s", tostring(func), a);
+		log("debug", "SQL %s transaction failure [%s]: %s", rw and "write" or "read", tostring(func), a);
 		if self.conn then self:_"ROLLBACK"; end
 		return success, a;
 	end
 end
 function engine:transaction(...)
-	local ok, ret = self:_transaction(...);
+	local ok, ret = self:_transaction(nil, ...);
 	if not ok then
 		local conn = self.conn;
 		if not conn or not conn:isopen() then
 			self.conn = nil;
 			self:ondisconnect();
-			ok, ret = self:_transaction(...);
+			ok, ret = self:_transaction(nil, ...);
 		end
 	end
 	return ok, ret;
 end
-engine.write_transaction = engine.transaction; -- TODO BEGIN IMMEDATE
+function engine:write_transaction(...)
+	local ok, ret = self:_transaction(true, ...);
+	if not ok then
+		local conn = self.conn;
+		if not conn or not conn:isopen() then
+			self.conn = nil;
+			self:ondisconnect();
+			ok, ret = self:_transaction(true, ...);
+		end
+	end
+	return ok, ret;
+end
 function engine:_create_index(index)
 	local sql = "CREATE INDEX IF NOT EXISTS \""..index.name.."\" ON \""..index.table.."\" (";
 	for i=1,#index do
