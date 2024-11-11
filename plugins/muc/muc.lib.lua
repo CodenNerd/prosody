@@ -133,11 +133,27 @@ function room_mt:save_occupant(occupant)
 	return occupant
 end
 
-function room_mt:route_to_occupant(occupant, stanza)
+function room_mt:route_to_occupant(occupant, stanza, session_filter)
 	local to = stanza.attr.to;
-	for jid in occupant:each_session() do
-		stanza.attr.to = jid;
-		self:route_stanza(stanza);
+	for session_jid, session_pres, session_meta in occupant:each_session() do
+		if session_filter then
+			stanza = session_filter(session_jid, session_pres, session_meta, stanza);
+		end
+		if stanza then
+			stanza.attr.to = session_jid;
+			self:route_stanza(stanza);
+		end
+	end
+	stanza.attr.to = to;
+end
+
+function room_mt:route_presence_to_occupant(occupant, stanza)
+	local to = stanza.attr.to;
+	for jid, _, session_meta in occupant:each_session() do
+		if not session_meta.filter_presence then
+			stanza.attr.to = jid;
+			self:route_stanza(stanza);
+		end
 	end
 	stanza.attr.to = to;
 end
@@ -297,7 +313,7 @@ function room_mt:publicise_occupant_status(occupant, x, nick, actor, reason, pre
 	end
 
 	if recipient then
-		return self:route_to_occupant(recipient, get_p(recipient));
+		return self:route_presence_to_occupant(recipient, get_p(recipient));
 	end
 
 	local broadcast_roles = self:get_presence_broadcast();
@@ -305,11 +321,11 @@ function room_mt:publicise_occupant_status(occupant, x, nick, actor, reason, pre
 	for occupant_nick, n_occupant in self:each_occupant() do
 		if occupant_nick ~= occupant.nick then
 			if broadcast_roles[occupant.role or "none"] or force_unavailable then
-				self:route_to_occupant(n_occupant, get_p(n_occupant));
+				self:route_presence_to_occupant(n_occupant, get_p(n_occupant));
 			elseif prev_role and broadcast_roles[prev_role] then
 				local pr = get_p(n_occupant);
 				pr.attr.type = 'unavailable';
-				self:route_to_occupant(n_occupant, pr);
+				self:route_presence_to_occupant(n_occupant, pr);
 			end
 
 		end
@@ -332,10 +348,14 @@ function room_mt:publicise_occupant_status(occupant, x, nick, actor, reason, pre
 	end
 end
 
-function room_mt:send_occupant_list(to, filter)
-	local to_bare = jid_bare(to);
+-- Send the current room list to an occupant (specifically to the real jid 'to',
+-- which is one of the occupant's sessions).
+function room_mt:send_occupant_list(to_occupant, to_jid, filter)
+	local to_session = to_occupant:get_session(to_jid);
+	if to_session.filter_presence then return; end
+	local to_bare = to_occupant.bare_jid;
 	local broadcast_roles = self:get_presence_broadcast();
-	local is_anonymous = self:is_anonymous_for(to);
+	local is_anonymous = self:is_anonymous_for(to_jid);
 	local broadcast_bare_jids = {}; -- Track which bare JIDs we have sent presence for
 	for occupant_jid, occupant in self:each_occupant() do
 		broadcast_bare_jids[occupant.bare_jid] = true;
@@ -343,7 +363,7 @@ function room_mt:send_occupant_list(to, filter)
 			local x = st.stanza("x", {xmlns='http://jabber.org/protocol/muc#user'});
 			self:build_item_list(occupant, x, is_anonymous and to_bare ~= occupant.bare_jid); -- can always see your own jids
 			local pres = st.clone(occupant:get_presence());
-			pres.attr.to = to;
+			pres.attr.to = to_jid;
 			pres:add_child(x);
 			module:fire_event("muc-build-occupant-presence", { room = self, occupant = occupant, stanza = pres });
 			self:route_stanza(pres);
@@ -356,7 +376,7 @@ function room_mt:send_occupant_list(to, filter)
 			if (nick or not is_anonymous) and not broadcast_bare_jids[affiliated_jid]
 			and (filter == nil or filter(affiliated_jid, nil)) then
 				local from = nick and (self.jid.."/"..nick) or self.jid;
-				local pres = st.presence({ to = to, from = from, type = "unavailable" })
+				local pres = st.presence({ to = to_jid, from = from, type = "unavailable" })
 					:tag("x", { xmlns = 'http://jabber.org/protocol/muc#user' })
 						:tag("item", {
 							affiliation = affiliation;
@@ -758,7 +778,7 @@ function room_mt:handle_normal_presence(origin, stanza)
 
 		if orig_occupant == nil or muc_x then
 			-- Send occupant list to newly joined or desynced user
-			self:send_occupant_list(real_jid, function(nick, occupant) -- luacheck: ignore 212
+			self:send_occupant_list(dest_occupant, real_jid, function(nick, occupant) -- luacheck: ignore 212
 				-- Don't include self
 				return (not occupant) or occupant:get_presence(real_jid) == nil;
 			end)
@@ -1514,7 +1534,7 @@ function room_mt:set_affiliation(actor, jid, affiliation, reason, data)
 				(old_role ~= "moderator" and occupant.role == "moderator")) then -- Has gained or lost moderator status
 				-- Send everyone else's presences (as jid visibility has changed)
 				for real_jid in occupant:each_session() do
-					self:send_occupant_list(real_jid, function(occupant_jid, occupant) --luacheck: ignore 212 433
+					self:send_occupant_list(occupant, real_jid, function(occupant_jid, occupant) --luacheck: ignore 212 433
 						return (not occupant) or occupant.bare_jid ~= jid;
 					end);
 				end
