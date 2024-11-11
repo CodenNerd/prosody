@@ -23,10 +23,11 @@ end
 -- Deep copy an occupant
 local function copy_occupant(occupant)
 	local sessions = {};
-	for full_jid, presence_stanza in pairs(occupant.sessions) do
+	for full_jid, session in pairs(occupant.sessions) do
+		local presence_stanza = session.presence;
 		-- Don't keep unavailable presences, as they'll accumulate; unless they're the primary session
 		if presence_stanza.attr.type ~= "unavailable" or full_jid == occupant.jid then
-			sessions[full_jid] = presence_stanza;
+			sessions[full_jid] = session;
 		end
 	end
 	return setmetatable({
@@ -48,12 +49,16 @@ function occupant_mt:choose_new_primary()
 	return nil;
 end
 
+function occupant_mt:get_session(real_jid)
+	return self.sessions[real_jid];
+end
+
 function occupant_mt:set_session(real_jid, presence_stanza, replace_primary)
 	local pr = get_filtered_presence(presence_stanza);
 	pr.attr.from = self.nick;
 	pr.attr.to = real_jid;
 
-	self.sessions[real_jid] = pr;
+	self.sessions[real_jid] = { presence = pr };
 	if replace_primary then
 		self.jid = real_jid;
 	elseif self.jid == nil or (pr.attr.type == "unavailable" and self.jid == real_jid) then
@@ -70,12 +75,23 @@ function occupant_mt:remove_session(real_jid)
 	end
 end
 
+-- An iterator over self.sessions that returns (jid, presence, session)
+local function _session_iter(s, var)
+	local k = next(s, var);
+	if k then
+		local v = s[k];
+		return k, v.presence, v;
+	end
+end
+
 function occupant_mt:each_session()
-	return pairs(self.sessions)
+	return _session_iter, self.sessions;
 end
 
 function occupant_mt:get_presence(real_jid)
-	return self.sessions[real_jid or self.jid]
+	local session = self.sessions[real_jid or self.jid];
+	if not session then return; end
+	return session.presence;
 end
 
 return {
