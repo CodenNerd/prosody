@@ -42,14 +42,14 @@ describe("parse", function()
 
 		do
 			-- Same test with strict mode enabled and all parameters declared
-			local opts, err = parse({ "--foo"; "-b" }, { kv_params = { foo = true, bar = true }; short_params = { b = "bar" }, strict = true });
+			local opts, err = parse({ "--foo"; "-b" }, { bool_params = { foo = true, bar = true }; short_params = { b = "bar" }, strict = true });
 			assert.falsy(err);
 			assert.same({ foo = true; bar = true }, opts);
 		end
 	end);
 
 	it("supports value arguments", function()
-		local opts, err = parse({ "--foo"; "bar"; "--baz=moo" }, { value_params = { foo = true; bar = true } });
+		local opts, err = parse({ "--foo"; "bar"; "--baz=moo" }, { value_params = { foo = true; bar = true, baz = true } });
 		assert.falsy(err);
 		assert.same({ foo = "bar"; baz = "moo" }, opts);
 	end);
@@ -96,9 +96,9 @@ describe("parse", function()
 		assert.same("--foobar", err2);
 	end);
 
-	it("accepts known kv parameters in strict mode", function ()
-		local opts, err = parse({ "--item=foo" }, { kv_params = { item = true }, strict = true });
+	it("accepts known bool parameters in strict mode", function ()
+		local opts, err = parse({ "--item" }, { bool_params = { item = true }, strict = true });
 		assert.falsy(err);
-		assert.same("foo", opts.item);
+		assert.same(true, opts.item);
 	end);
 end);

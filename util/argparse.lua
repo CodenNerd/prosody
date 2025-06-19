@@ -2,7 +2,7 @@ local function parse(arg, config)
 	local short_params = config and config.short_params or {};
 	local value_params = config and config.value_params or {};
 	local array_params = config and config.array_params or {};
-	local kv_params = config and config.kv_params or {};
+	local bool_params = config and (config.bool_params or config.kv_params) or {}; -- COMPAT: kv_params in 13.0 and earlier
 	local strict = config and config.strict;
 	local stop_on_positional = not config or config.stop_on_positional ~= false;
 
@@ -48,16 +48,13 @@ local function parse(arg, config)
 					end
 				end
 			else
-				param_k, param_v = param:match("^([^=]+)=(.+)$");
-				if not param_k then
-					if param:match("^no%-") then
-						param_k, param_v = param:sub(4), false;
-					else
-						param_k, param_v = param, true;
-					end
+				if param:match("^no%-") then
+					param_k, param_v = param:sub(4), false;
+				else
+					param_k, param_v = param, true;
 				end
 				param_k = param_k:gsub("%-", "_");
-				if strict and not kv_params[param_k] then
+				if strict and not bool_params[param_k] then
 					return nil, "param-not-found", raw_param;
 				end
 			end
