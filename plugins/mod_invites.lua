@@ -260,7 +260,7 @@ module:add_item("shell-command", {
 	flags = {
 		array_params = { role = true, group = have_group_invites };
 		value_params = { expires_after = true };
-		kv_params = { admin = true };
+		bool_params = { admin = true };
 	};
 
 	handler = function (self, user_jid, opts) --luacheck: ignore 212/self
@@ -326,7 +326,7 @@ module:add_item("shell-command", {
 	host_selector = "user_jid";
 	flags = {
 		value_params = { expires_after = true };
-		kv_params = { allow_registration = true };
+		bool_params = { allow_registration = true };
 	};
 
 	handler = function (self, user_jid, opts) --luacheck: ignore 212/self
