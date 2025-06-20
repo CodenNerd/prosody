@@ -100,6 +100,7 @@ room_mt.get_valid_broadcast_roles = presence_broadcast.get_valid_broadcast_roles
 local occupant_id = module:require "muc/occupant_id";
 room_mt.get_salt = occupant_id.get_room_salt;
 room_mt.get_occupant_id = occupant_id.get_occupant_id;
+room_mt.get_occupant_id_from_jid = occupant_id.get_occupant_id_from_jid;
 
 local jid_split = require "prosody.util.jid".split;
 local jid_prep = require "prosody.util.jid".prep;

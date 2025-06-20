@@ -31,6 +31,11 @@ local function get_occupant_id(room, occupant)
 	return occupant.stable_id;
 end
 
+local function get_occupant_id_from_jid(room, real_bare_jid)
+	local salt = get_room_salt(room)
+	return b64encode(hmac_sha256(real_bare_jid, salt));
+end
+
 local function update_occupant(event)
 	local stanza, room, occupant, dest_occupant = event.stanza, event.room, event.occupant, event.dest_occupant;
 
@@ -73,4 +78,5 @@ end
 return {
 	get_room_salt = get_room_salt;
 	get_occupant_id = get_occupant_id;
+	get_occupant_id_from_jid = get_occupant_id_from_jid;
 };
