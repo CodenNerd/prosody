@@ -26,7 +26,8 @@ local cache = require "prosody.util.cache";
 
 local xmlns_streams = "http://etherx.jabber.org/streams";
 local xmlns_xmpp_streams = "urn:ietf:params:xml:ns:xmpp-streams";
-local xmlns_bosh = "http://jabber.org/protocol/httpbind"; -- (hard-coded into a literal in session.send)
+local xmlns_bosh = "http://jabber.org/protocol/httpbind";
+local xmlns_xbosh = "urn:xmpp:xbosh";
 
 local stream_callbacks = {
 	stream_ns = xmlns_bosh, stream_tag = "body", default_ns = "jabber:client" };
@@ -223,7 +224,7 @@ end
 
 local function bosh_reset_stream(session) session.notopen = true; end
 
-local stream_xmlns_attr = { xmlns = "urn:ietf:params:xml:ns:xmpp-streams" };
+local stream_xmlns_attr = { xmlns = xmlns_xmpp_streams };
 local function bosh_close_stream(session, reason)
 	(session.log or log)("info", "BOSH client disconnected: %s", (reason and reason.condition or reason) or "session close");
 
@@ -366,8 +367,8 @@ function stream_callbacks.streamopened(context, attr)
 			local oldest_request = r[1];
 			if oldest_request and not session.bosh_processing then
 				log("debug", "We have an open request, so sending on that");
-				local body_attr = { xmlns = "http://jabber.org/protocol/httpbind",
-					["xmlns:stream"] = "http://etherx.jabber.org/streams";
+				local body_attr = { xmlns = xmlns_bosh,
+					["xmlns:stream"] = xmlns_streams;
 					type = session.bosh_terminate and "terminate" or nil;
 					sid = sid;
 				};
@@ -382,7 +383,7 @@ function stream_callbacks.streamopened(context, attr)
 					body_attr.secure = "true";
 					body_attr.ver  = '1.6';
 					body_attr.from = session.host;
-					body_attr["xmlns:xmpp"] = "urn:xmpp:xbosh";
+					body_attr["xmlns:xmpp"] = xmlns_xbosh;
 					body_attr["xmpp:version"] = "1.0";
 				end
 				local response_xml = st.stanza("body", body_attr):top_tag()..t_concat(session.send_buffer).."</body>";
