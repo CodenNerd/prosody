@@ -4,9 +4,10 @@ local resourceprep = require "prosody.util.encodings".stringprep.resourceprep;
 local st = require "prosody.util.stanza";
 local dataforms = require "prosody.util.dataforms";
 
-local allow_unaffiliated = module:get_option_boolean("allow_unaffiliated_register", false);
+local gc3_mode = module:get_option_boolean("muc_enable_experimental_gc3", false);
 
-local enforce_nick = module:get_option_boolean("enforce_registered_nickname", false);
+local allow_unaffiliated = module:get_option_boolean("allow_unaffiliated_register", gc3_mode);
+local enforce_nick = module:get_option_boolean("enforce_registered_nickname", gc3_mode);
 
 -- Whether to include the current registration data as a dataform. Disabled
 -- by default currently as it hasn't been widely tested with clients.
