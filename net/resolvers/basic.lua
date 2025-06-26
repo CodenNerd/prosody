@@ -66,6 +66,9 @@ function methods:next(cb)
 			return;
 		end
 		local next_target = table.remove(self.targets, 1);
+		if self.filter and not self.filter(next_target[1], next_target[2], next_target[3], next_target[4], not not self.targets[1]) then
+			return self:next(cb);
+		end
 		cb(next_target[1], next_target[2], next_target[3], next_target[4], not not self.targets[1]);
 		return;
 	end
@@ -142,6 +145,7 @@ local function new(hostname, port, conn_type, extra)
 		port = port;
 		conn_type = conn_type;
 		extra = extra or {};
+		filter = extra and extra.filter;
 		targets = targets;
 	}, resolver_mt);
 end

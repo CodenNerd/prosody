@@ -20,6 +20,8 @@ return {
 		"loader";
 		-- "keyval+" store
 		"keyval+";
+		-- Support for target filter in net.resolvers.basic
+		"net-connect-filter";
 
 		"s2sout-pre-connect-event";
 
