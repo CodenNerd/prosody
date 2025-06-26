@@ -24,6 +24,7 @@ local st = require "prosody.util.stanza";
 local base64 = require "prosody.util.encodings".base64;
 local hmac_sha256 = require "prosody.util.hashes".hmac_sha256;
 local new_id = require "prosody.util.id".medium;
+local time = require "prosody.util.time";
 
 local log = module._log;
 
@@ -1457,6 +1458,15 @@ function room_mt:set_affiliation(actor, jid, affiliation, reason, data)
 		end
 	end
 
+	data = data or {};
+	local old_data = self._affiliation_data[jid];
+
+	local current_time = time.now();
+	data.affiliation_created_at = old_data and old_data.affiliation_created_at or current_time;
+	data.affiliation_created_by = old_data and old_data.affiliation_created_by or actor;
+	data.affiliation_modified_at = current_time;
+	data.affiliation_modified_by = actor;
+
 	local event_data = {
 		room = self;
 		actor = actor;
@@ -1464,7 +1474,7 @@ function room_mt:set_affiliation(actor, jid, affiliation, reason, data)
 		affiliation = affiliation or "none";
 		reason = reason;
 		previous_affiliation = target_affiliation or "none";
-		data = data and data or nil; -- coerce false to nil
+		data = data;
 		previous_data = self._affiliation_data[jid] or nil;
 	};
 
@@ -1472,10 +1482,6 @@ function room_mt:set_affiliation(actor, jid, affiliation, reason, data)
 	if event_data.allowed == false then
 		local err = event_data.error or { type = "cancel", condition = "not-allowed" };
 		return nil, err.type, err.condition;
-	end
-	if affiliation and not data and event_data.data then
-		-- Allow handlers to add data when none was going to be set
-		data = event_data.data;
 	end
 
 	-- Set in 'database'
