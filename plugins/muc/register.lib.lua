@@ -125,9 +125,16 @@ local function handle_register_iq(room, origin, stanza)
 	if affiliation == "outcast" then
 		origin.send(st.error_reply(stanza, "auth", "forbidden"));
 		return true;
-	elseif not (affiliation or allow_unaffiliated) then
-		origin.send(st.error_reply(stanza, "auth", "registration-required"));
-		return true;
+	elseif not affiliation then
+		if room:get_members_only() then
+			-- Never allow unaffiliated users to register their way into a members-only room
+			origin.send(st.error_reply(stanza, "auth", "forbidden"));
+			return true;
+		elseif not allow_unaffiliated then
+			-- Not members-only, but we're not permitting registration due to config
+			origin.send(st.error_reply(stanza, "auth", "registration-required"));
+			return true;
+		end
 	end
 	local reply = st.reply(stanza);
 	local registered_nick = get_registered_nick(room, user_jid);
