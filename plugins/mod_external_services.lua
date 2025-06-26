@@ -242,3 +242,41 @@ module:hook("iq-get/host/urn:xmpp:extdisco:2:credentials", handle_credentials);
 module:add_feature("urn:xmpp:extdisco:1");
 module:hook("iq-get/host/urn:xmpp:extdisco:1:services", handle_services);
 module:hook("iq-get/host/urn:xmpp:extdisco:1:credentials", handle_credentials);
+
+
+module:add_item("shell-command", {
+	section = "services";
+	section_desc = "Inspect external services";
+	name = "list";
+	desc = "List all external services for a host";
+	args = {
+		{ name = "host", type = "string" };
+		{ name = "service", type = "string" };
+	};
+	host_selector = "host";
+	handler = function (shell, host, service_type) --luacheck: ignore 212/host
+		local c = 0;
+		local print = shell.session.print;
+		local services = get_services();
+		for _, srv in ipairs(services) do
+			if not service_type or service_type:lower() == srv.type:lower() then
+				c = c + 1;
+				print(srv.type.." ("..srv.transport..")", srv.host..(srv.port and (":"..srv.port) or ""));
+				for _, prop in ipairs({ "username", "password", "expires" }) do
+					local val = srv[prop];
+					if val then
+						if prop == "expires" then
+							val = dt.datetime(val);
+						end
+						print(" "..prop..":", val);
+					end
+				end
+				if srv.restricted then
+					print(" restricted:", "yes");
+				end
+				print("");
+			end
+		end
+		return true, ("%d services"):format(c);
+	end;
+});
