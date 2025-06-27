@@ -93,7 +93,14 @@ function api:unhook_object_event(object, event, handler)
 end
 
 function api:hook(event, handler, priority)
-	return self:hook_object_event((hosts[self.host] or prosody).events, event, handler, priority);
+	local events;
+	local host = self.host;
+	if host == "*" then
+		events = prosody.events;
+	else
+		events = hosts[host].events;
+	end
+	return self:hook_object_event(events, event, handler, priority);
 end
 
 function api:hook_global(event, handler, priority)
