@@ -101,6 +101,9 @@ local function prepare(item)
 			srv.restricted = true;
 		end
 	end
+	if item.extra and st.is_stanza(item.extra) then
+		srv.extra = item.extra;
+	end
 	return srv;
 end
 
@@ -149,7 +152,11 @@ function services_xml(services, name, namespace)
 				password = srv.password;
 				expires = srv.expires and dt.datetime(srv.expires) or nil;
 				restricted = srv.restricted and "1" or nil;
-			}):up();
+			});
+		if srv.extra then
+			reply:add_child(srv.extra);
+		end
+		reply:up();
 	end
 
 	return reply;
@@ -262,6 +269,7 @@ module:add_item("shell-command", {
 			if not service_type or service_type:lower() == srv.type:lower() then
 				c = c + 1;
 				print(srv.type.." ("..srv.transport..")", srv.host..(srv.port and (":"..srv.port) or ""));
+				print(" auth:", srv.restricted and "required" or "none");
 				for _, prop in ipairs({ "username", "password", "expires" }) do
 					local val = srv[prop];
 					if val then
@@ -271,8 +279,9 @@ module:add_item("shell-command", {
 						print(" "..prop..":", val);
 					end
 				end
-				if srv.restricted then
-					print(" restricted:", "yes");
+				if srv.extra then
+					print(" extra:");
+					print("    "..tostring(srv.extra:indent(3, "  ")));
 				end
 				print("");
 			end
