@@ -62,6 +62,7 @@ local default_keywords = {
 	["or"] = true; ["nil"] = true; ["true"] = true; ["until"] = true;
 	["elseif"] = true; ["function"] = true; ["not"] = true;
 	["repeat"] = true; ["return"] = true; ["while"] = true;
+	["global"] = true;
 };
 
 local function new(opt)
