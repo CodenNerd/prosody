@@ -361,6 +361,7 @@ function stream_callbacks.streamopened(context, attr)
 				s = st.clone(s);
 				s.attr.xmlns = "jabber:client";
 			end
+			s = session.filter("bytes/out", tostring(s));
 			--log("debug", "Sending BOSH data: %s", s);
 			if not s then return true end
 			t_insert(session.send_buffer, tostring(s));
