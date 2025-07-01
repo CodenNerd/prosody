@@ -10,13 +10,12 @@ module:set_global();
 
 local new_xmpp_stream = require "prosody.util.xmppstream".new;
 local sm = require "prosody.core.sessionmanager";
+local sm_new_session = sm.new_session;
 local sm_destroy_session = sm.destroy_session;
 local new_uuid = require "prosody.util.uuid".generate;
 local core_process_stanza = prosody.core_process_stanza;
 local st = require "prosody.util.stanza";
-local logger = require "prosody.util.logger";
 local log = module._log;
-local initialize_filters = require "prosody.util.filters".initialize;
 local math_min = math.min;
 local tostring, type = tostring, type;
 local traceback = debug.traceback;
@@ -324,24 +323,27 @@ function stream_callbacks.streamopened(context, attr)
 
 		-- New session
 		sid = new_uuid();
-		-- TODO use util.session
-		local session = {
-			base_type = "c2s", type = "c2s_unauthed", conn = request.conn, sid = sid, host = attr.to,
-			rid = rid - 1, -- Hack for initial session setup, "previous" rid was $current_request - 1
-			bosh_version = attr.ver, bosh_wait = wait, streamid = sid,
-			bosh_max_inactive = bosh_max_inactivity, bosh_responses = cache.new(BOSH_HOLD+1):table();
-			requests = { }, send_buffer = {}, reset_stream = bosh_reset_stream,
-			close = bosh_close_stream, dispatch_stanza = core_process_stanza, notopen = true,
-			log = logger.init("bosh"..sid),	secure = consider_bosh_secure or request.secure,
-			ip = request.ip;
-		};
+		local session = sm_new_session(request.conn);
+		session.sid = sid;
+		session.host = attr.to;
+		session.rid = rid - 1; -- Hack for initial session setup, "previous" rid was $current_request - 1
+		session.bosh_version = attr.ver;
+		session.bosh_wait = wait;
+		session.streamid = sid;
+		session.bosh_max_inactive = bosh_max_inactivity;
+		session.bosh_responses = cache.new(BOSH_HOLD + 1):table();
+		session.requests = {};
+		session.send_buffer = {};
+		session.reset_stream = bosh_reset_stream;
+		session.close = bosh_close_stream;
+		session.dispatch_stanza = core_process_stanza;
+		session.notopen = true;
+		session.secure = consider_bosh_secure or request.secure;
 		sessions[sid] = session;
 
 		session.thread = runner(function (stanza)
 			session:dispatch_stanza(stanza);
 		end, runner_callbacks, session);
-
-		local filter = initialize_filters(session);
 
 		session.log("debug", "BOSH session created for request from %s", session.ip);
 		log("info", "New BOSH session, assigned it sid '%s'", sid);
@@ -353,13 +355,12 @@ function stream_callbacks.streamopened(context, attr)
 		local creating_session = true;
 
 		local r = session.requests;
-		function session.send(s)
+		function session.rawsend(s)
 			-- We need to ensure that outgoing stanzas have the jabber:client xmlns
 			if s.attr and not s.attr.xmlns then
 				s = st.clone(s);
 				s.attr.xmlns = "jabber:client";
 			end
-			s = filter("stanzas/out", s);
 			--log("debug", "Sending BOSH data: %s", s);
 			if not s then return true end
 			t_insert(session.send_buffer, tostring(s));
