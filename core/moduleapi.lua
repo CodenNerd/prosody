@@ -412,11 +412,14 @@ function api:get_option_enum(name, default, ...)
 end
 
 function api:context(host)
-	local is_global = host == "*";
+	local is_global;
+	if not host or host == "*" then
+		host, is_global = "*", true;
+	end
 	if not is_global and not hosts[host] then
 		error("Cannot create context for unknown host: "..host);
 	end
-	return setmetatable({ host = host or "*", global = is_global }, { __index = self, __newindex = self });
+	return setmetatable({ host = host, global = is_global }, { __index = self, __newindex = self });
 end
 
 function api:add_item(key, value)
