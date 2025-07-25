@@ -11,6 +11,7 @@ local st = require "prosody.util.stanza";
 local dt = require "prosody.util.datetime";
 local filters = require "prosody.util.filters";
 local timer = require "prosody.util.timer";
+local jid_bare = require "prosody.util.jid".bare;
 
 local queue_size = module:get_option_integer("csi_queue_size", 256, 1);
 local resume_delay = module:get_option_period("csi_resume_inactive_delay", 5);
@@ -40,12 +41,17 @@ function is_important(stanza) --> boolean, reason: string
 		-- TODO Some MUC awareness, e.g. check for the 'this relates to you' status code
 		return true, "subscription request";
 	elseif st_name == "message" then
+		if st_type == "error" then
+			return true, "delivery failure";
+		end
+		if stanza:get_child("event", "http://jabber.org/protocol/pubsub#event") then
+			if stanza.attr.from == nil or stanza.attr.from == jid_bare(stanza.attr.to) then
+				return true, "self-pep-event";
+			end
+		end
 		if st_type == "headline" then
 			-- Headline messages are ephemeral by definition
 			return false, "headline";
-		end
-		if st_type == "error" then
-			return true, "delivery failure";
 		end
 		if stanza:get_child("sent", "urn:xmpp:carbons:2") then
 			return true, "carbon";
