@@ -210,7 +210,11 @@ end
 local function session_close(session, reason)
 	local log = session.log or log;
 	local close_event_payload = { session = session, reason = reason };
-	module:context(session.host):fire_event("pre-session-close", close_event_payload);
+
+	-- Fire event on host if we know it, otherwise fire globally
+	local context = hosts[session.host] and module:context(session.host) or module:context("*");
+	context:fire_event("pre-session-close", close_event_payload);
+
 	reason = close_event_payload.reason;
 	if session.conn then
 		if session.notopen then
