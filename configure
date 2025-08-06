@@ -174,7 +174,7 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       LUA_VERSION="$value"
       [ "$LUA_VERSION" != "5.1" ] || die "Lua 5.1 is no longer supported"
-      [ "$LUA_VERSION" = "5.2" ] || [ "$LUA_VERSION" = "5.3" ] || [ "$LUA_VERSION" = "5.4" ] || die "Invalid Lua version in flag $key."
+      [ "$LUA_VERSION" = "5.2" ] || [ "$LUA_VERSION" = "5.3" ] || [ "$LUA_VERSION" = "5.4" ] || [ "$LUA_VERSION" = "5.5" ] || die "Invalid Lua version in flag $key."
       LUA_VERSION_SET=yes
       ;;
    --with-lua)
@@ -336,7 +336,7 @@ then
 fi
 
 detect_lua_version() {
-   detected_lua=$("$1" -e 'print(_VERSION:match(" (5%.[234])$"))' 2> /dev/null)
+   detected_lua=$("$1" -e 'print(_VERSION:match(" (5%.%d+)$"))' 2> /dev/null)
    if [ "$detected_lua" != "nil" ]
    then
       if [ "$LUA_VERSION_SET" != "yes" ]
@@ -399,10 +399,14 @@ then
    elif [ "$LUA_VERSION_SET" = "yes" ] && [ "$LUA_VERSION" = "5.4" ]
    then
       suffixes="5.4 54 -5.4 -54"
+   elif [ "$LUA_VERSION_SET" = "yes" ] && [ "$LUA_VERSION" = "5.5" ]
+   then
+      suffixes="5.5 55 -5.5 -55"
    else
       suffixes="5.2 52 -5.2 -52"
       suffixes="$suffixes 5.3 53 -5.3 -53"
       suffixes="$suffixes 5.4 54 -5.4 -54"
+      suffixes="$suffixes 5.5 55 -5.5 -55"
    fi
    for suffix in "" $suffixes
    do
@@ -508,6 +512,11 @@ if [ "$lua_interp_found" = "yes" ]
 then
    echo_n "Checking if Lua header version matches that of the interpreter... "
    header_version=$(sed -n 's/.*LUA_VERSION_NUM.*5.\(.\).*/5.\1/p' "$lua_h")
+   if [ -z "$header_version" ]; then
+      header_major_version=$(sed -n 's/.*LUA_VERSION_MAJOR_N\s*.\([0-9]\).*/\1/p' "$lua_h")
+      header_minor_version=$(sed -n 's/.*LUA_VERSION_MINOR_N\s*.\([0-9]\).*/\1/p' "$lua_h")
+      header_version="$header_major_version.$header_minor_version"
+   fi
    if [ "$header_version" = "$LUA_VERSION" ]
    then
       echo "yes"
