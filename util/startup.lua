@@ -20,6 +20,10 @@ local default_gc_params = {
 	threshold = 105, speed = 500;
 	-- Generational mode defaults
 	minor_threshold = 20, major_threshold = 50;
+	-- Lua 5.5
+	minor_multiplier = 20;
+	major_minor_threshold = 50;
+	minor_major_threshold = 68;
 };
 
 local arg_settigs = {
