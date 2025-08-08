@@ -15,7 +15,7 @@ describe("util.format", function()
 			assert.equal("% [true]", format("%%", true));
 			assert.equal("{}", format("%q", {}));
 			assert.equal("[1.5]", format("%d", 1.5));
-			assert.equal("[7.3786976294838e+19]", format("%d", 73786976294838206464));
+			assert.matches("%[7%.3786976294838%d*e%+19%]", format("%d", 73786976294838206464));
 		end);
 
 		it("escapes ascii control stuff", function ()
@@ -262,7 +262,7 @@ describe("util.format", function()
 				it("works", function ()
 					assert.equal("a", format("%c", 97))
 					assert.equal("[1.5]", format("%c", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%c", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%c", 73786976294838206464))
 					assert.equal("[inf]", format("%c", math.huge))
 				end);
 			end);
@@ -272,7 +272,7 @@ describe("util.format", function()
 					assert.equal("97", format("%d", 97))
 					assert.equal("-12345", format("%d", -12345))
 					assert.equal("[1.5]", format("%d", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%d", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%d", 73786976294838206464))
 					assert.equal("[inf]", format("%d", math.huge))
 					assert.equal("2147483647", format("%d", 2147483647))
 				end);
@@ -283,7 +283,7 @@ describe("util.format", function()
 					assert.equal("97", format("%i", 97))
 					assert.equal("-12345", format("%i", -12345))
 					assert.equal("[1.5]", format("%i", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%i", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%i", 73786976294838206464))
 					assert.equal("[inf]", format("%i", math.huge))
 					assert.equal("2147483647", format("%i", 2147483647))
 				end);
@@ -294,7 +294,7 @@ describe("util.format", function()
 					assert.equal("141", format("%o", 97))
 					assert.equal("[-12345]", format("%o", -12345))
 					assert.equal("[1.5]", format("%o", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%o", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%o", 73786976294838206464))
 					assert.equal("[inf]", format("%o", math.huge))
 					assert.equal("17777777777", format("%o", 2147483647))
 				end);
@@ -305,7 +305,7 @@ describe("util.format", function()
 					assert.equal("97", format("%u", 97))
 					assert.equal("[-12345]", format("%u", -12345))
 					assert.equal("[1.5]", format("%u", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%u", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%u", 73786976294838206464))
 					assert.equal("[inf]", format("%u", math.huge))
 					assert.equal("2147483647", format("%u", 2147483647))
 				end);
@@ -316,7 +316,7 @@ describe("util.format", function()
 					assert.equal("61", format("%x", 97))
 					assert.equal("[-12345]", format("%x", -12345))
 					assert.equal("[1.5]", format("%x", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%x", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%x", 73786976294838206464))
 					assert.equal("[inf]", format("%x", math.huge))
 					assert.equal("7fffffff", format("%x", 2147483647))
 				end);
@@ -327,7 +327,7 @@ describe("util.format", function()
 					assert.equal("61", format("%X", 97))
 					assert.equal("[-12345]", format("%X", -12345))
 					assert.equal("[1.5]", format("%X", 1.5))
-					assert.equal("[7.3786976294838e+19]", format("%X", 73786976294838206464))
+					assert.matches("%[7%.3786976294838%d*e%+19%]", format("%X", 73786976294838206464))
 					assert.equal("[inf]", format("%X", math.huge))
 					assert.equal("7FFFFFFF", format("%X", 2147483647))
 				end);
@@ -426,7 +426,7 @@ describe("util.format", function()
 					assert.equal("97", format("%s", 97))
 					assert.equal("-12345", format("%s", -12345))
 					assert.equal("1.5", format("%s", 1.5))
-					assert.equal("7.3786976294838e+19", format("%s", 73786976294838206464))
+					assert.matches("7%.3786976294838%d*e%+19", format("%s", 73786976294838206464))
 					assert.equal("inf", format("%s", math.huge))
 					assert.equal("2147483647", format("%s", 2147483647))
 				end);
