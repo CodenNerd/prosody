@@ -1,6 +1,10 @@
 TRUNK
 =====
 
+## New
+
+- Support for Lua 5.5
+
 13.0.0
 ======
 
