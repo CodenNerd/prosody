@@ -119,7 +119,7 @@ help_topic "columns" "Information about customizing session listings" (function 
 		meta_columns[2].width = math.max(meta_columns[2].width or 0, #(spec.title or ""));
 		meta_columns[3].width = math.max(meta_columns[3].width or 0, #(spec.description or ""));
 	end
-	local row = format_table(meta_columns, self.session.width)
+	local row = format_table(meta_columns, self.session.width, self.session.column_separator)
 	print(row());
 	for column, spec in iterators.sorted_pairs(available_columns) do
 		print(row({ column, spec.title, spec.description }));
@@ -351,8 +351,10 @@ local function handle_line(event)
 	local useglobalenv;
 
 	session.repl = event.stanza.attr.repl ~= "0";
-	if session.repl then
+	if session.repl and session.width ~= -1 then
 		session.width = session.width - margin;
+	elseif session.width == -1 then
+		session.column_separator = "\t";
 	end
 
 	local result = st.stanza("repl-result");
@@ -490,7 +492,7 @@ function commands.help(session, data)
 	print [[Commands are divided into multiple sections. For help on a particular section, ]]
 	print [[type: help SECTION (for example, 'help c2s'). Sections are: ]]
 	print [[]]
-	local row = format_table({ { title = "Section", width = 7 }, { title = "Description", width = "100%" } }, session.width)
+	local row = format_table({ { title = "Section", width = 7 }, { title = "Description", width = "100%" } }, session.width, session.column_separator)
 	print(row())
 	for section_name, section in it.sorted_pairs(def_env) do
 		local section_mt = getmetatable(section);
@@ -1309,7 +1311,7 @@ describe_command [[c2s:show(jid, columns) - Show all client sessions with the sp
 function def_env.c2s:show(match_jid, colspec)
 	local print = self.session.print;
 	local columns = get_colspec(colspec, { "id"; "jid"; "role"; "ipv"; "status"; "secure"; "smacks"; "csi" });
-	local row = format_table(columns, self.session.width);
+	local row = format_table(columns, self.session.width, self.session.column_separator);
 
 	local function match(session)
 		local jid = get_jid(session)
@@ -1414,7 +1416,7 @@ describe_command [[s2s:show(domain, columns) - Show all s2s connections for the 
 function def_env.s2s:show(match_jid, colspec)
 	local print = self.session.print;
 	local columns = get_colspec(colspec, { "id"; "host"; "dir"; "remote"; "ipv"; "secure"; "s2s_sasl"; "dialback" });
-	local row = format_table(columns, self.session.width);
+	local row = format_table(columns, self.session.width, self.session.column_separator);
 
 	local function match(session)
 		return match_s2s_jid(session, match_jid);
@@ -1771,7 +1773,7 @@ function def_env.muc:occupants(room_jid, filter)
 		{ title = "Role"; width = 12; key = "role" }; -- longest role name
 		{ title = "JID"; width = "75%"; key = "bare_jid" };
 		{ title = "Nickname"; width = "25%"; key = "nick"; mapper = jid_resource };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 	local occupants = array.collect(iterators.select(2, room_obj:each_occupant()));
 	local total = #occupants;
 	if filter then
@@ -1816,7 +1818,7 @@ function def_env.muc:affiliations(room_jid, filter)
 		{ title = "Affiliation"; width = 12 }; -- longest affiliation name
 		{ title = "JID"; width = "75%" };
 		{ title = "Nickname"; width = "25%"; key = "reserved_nickname" };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 	local affiliated = array();
 	for affiliated_jid, affiliation, affiliation_data in room_obj:each_affiliation() do
 		affiliated:push(setmetatable({ affiliation; affiliated_jid }, { __index = affiliation_data }));
@@ -2160,12 +2162,12 @@ function def_env.http:list(hosts)
 	local output_simple = format_table({
 		{ title = "Module"; width = "1p" };
 		{ title = "External URL"; width = "6p" };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 	local output_split = format_table({
 		{ title = "Module"; width = "1p" };
 		{ title = "External URL"; width = "3p" };
 		{ title = "Internal URL"; width = "3p" };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 
 	for _, host in ipairs(hosts) do
 		local http_apps = modulemanager.get_items("http-provider", host);
@@ -2381,7 +2383,7 @@ function def_env.debug:async(runner_id)
 		{ title = "Function"; width = "10p" };
 		{ title = "Status"; width = "16" };
 		{ title = "Location"; width = "10p" };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 	print(row())
 
 	local c = 0;
@@ -2446,7 +2448,7 @@ function def_env.debug:cert_index(path)
 		{ title = "Domain", width = max_domain };
 		{ title = "Certificate", width = "100%" };
 		{ title = "Service", width = 5 };
-	}, self.session.width);
+	}, self.session.width, self.session.column_separator);
 	print(row());
 	print(("-"):rep(self.session.width or 80));
 	for domain, certs in it.sorted_pairs(index) do

@@ -30,7 +30,7 @@ local function read_line(prompt_string)
 end
 
 local function send_line(client, line, interactive)
-	client.send(st.stanza("repl-input", { width = tostring(term_width()), repl = interactive == false and "0" or "1" }):text(line));
+	client.send(st.stanza("repl-input", { width = tostring(term_width(-1)), repl = interactive == false and "0" or "1" }):text(line));
 end
 
 local function repl(client)
