@@ -345,12 +345,15 @@ local function handle_line(event)
 
 	local default_width = 132; -- The common default of 80 is a bit too narrow for e.g. s2s:show(), 132 was another common width for hardware terminals
 	local margin = 2; -- To account for '| ' when lines are printed
-	session.width = (tonumber(event.stanza.attr.width) or default_width)-margin;
+	session.width = tonumber(event.stanza.attr.width) or default_width;
 
 	local line = event.stanza:get_text();
 	local useglobalenv;
 
 	session.repl = event.stanza.attr.repl ~= "0";
+	if session.repl then
+		session.width = session.width - margin;
+	end
 
 	local result = st.stanza("repl-result");
 
