@@ -166,9 +166,9 @@ local function calculate_column_widths(col_specs, separator, max_width)
 	return widths;
 end
 
-local function new_table(col_specs, max_width)
+local function new_table(col_specs, max_width, separator)
 	max_width = max_width or term_width(80);
-	local separator = " | ";
+	separator = separator or " | ";
 
 	local widths = calculate_column_widths(col_specs, separator, max_width);
 
