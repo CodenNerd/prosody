@@ -131,10 +131,7 @@ local function ellipsis(s, width)
 	return utf8_cut(s, width - 1) .. "…";
 end
 
-local function new_table(col_specs, max_width)
-	max_width = max_width or term_width(80);
-	local separator = " | ";
-
+local function calculate_column_widths(col_specs, separator, max_width)
 	local widths = {};
 	local total_width = max_width - #separator * (#col_specs-1);
 	local free_width = total_width;
@@ -165,6 +162,15 @@ local function new_table(col_specs, max_width)
 			widths[i] = math.floor(free_width*(rel_width/total_proportional_width));
 		end
 	end
+
+	return widths;
+end
+
+local function new_table(col_specs, max_width)
+	max_width = max_width or term_width(80);
+	local separator = " | ";
+
+	local widths = calculate_column_widths(col_specs, separator, max_width);
 
 	return function (row)
 		local titles;
