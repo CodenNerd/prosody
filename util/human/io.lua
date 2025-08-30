@@ -167,10 +167,15 @@ local function calculate_column_widths(col_specs, separator, max_width)
 end
 
 local function new_table(col_specs, max_width, separator)
-	max_width = max_width or term_width(80);
 	separator = separator or " | ";
 
-	local widths = calculate_column_widths(col_specs, separator, max_width);
+	local widths;
+	if max_width ~= -1 then
+		max_width = max_width or term_width(80);
+		widths = calculate_column_widths(col_specs, separator, max_width)
+	else
+		widths = {};
+	end
 
 	return function (row)
 		local titles;
@@ -189,14 +194,16 @@ local function new_table(col_specs, max_width, separator)
 			else
 				v = tostring(v);
 			end
-			if len(v) < width then
-				if column.align == "right" then
-					v = padleft(v, width);
-				else
-					v = padright(v, width);
+			if width then
+				if len(v) < width then
+					if column.align == "right" then
+						v = padleft(v, width);
+					else
+						v = padright(v, width);
+					end
+				elseif len(v) > width then
+					v = (column.ellipsis or ellipsis)(v, width);
 				end
-			elseif len(v) > width then
-				v = (column.ellipsis or ellipsis)(v, width);
 			end
 			table.insert(output, v);
 		end
