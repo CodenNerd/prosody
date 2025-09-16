@@ -83,6 +83,22 @@ Juliet receives:
 	</iq>
 
 Balthasar sends:
+	<iq type="get" id='aff0' to='pubsub.localhost'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<affiliations node="princely_musings"/>
+		</pubsub>
+	</iq>
+
+Balthasar receives:
+	<iq from="pubsub.localhost" id="aff0" type="result">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<affiliations>
+				<affiliation affiliation="owner" node="princely_musings"/>
+			</affiliations>
+		</pubsub>
+	</iq>
+
+Balthasar sends:
 	<iq type="get" id='aff1' to='pubsub.localhost'>
 		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
 			<affiliations node="princely_musings"/>
