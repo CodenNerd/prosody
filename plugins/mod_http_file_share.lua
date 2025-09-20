@@ -20,6 +20,7 @@ local hi = require "prosody.util.human.units";
 local cache = require "prosody.util.cache";
 local join_path = require "util.paths".join;
 local lfs = require "lfs";
+local ENOENT = require "prosody.util.pposix".ENOENT;
 
 local unknown = math.abs(0/0);
 local unlimited = math.huge;
@@ -483,7 +484,6 @@ if expiry < math.huge and not external_base_url then
 	-- TODO HTTP DELETE to the external endpoint?
 	local array = require "prosody.util.array";
 	local async = require "prosody.util.async";
-	local ENOENT = require "prosody.util.pposix".ENOENT;
 
 	local function sleep(t)
 		local wait, done = async.waiter();
@@ -590,12 +590,19 @@ module:weekly("Calculate total storage usage", function()
 	end
 
 	local upload_dir = dm.getpath("", module.host, module.name, ""):gsub("/[^/]*$", "");
-	for file in lfs.dir(upload_dir) do
-		local file_path = join_path(upload_dir, file);
-		if file ~= "." and file ~= ".." and not expected_filenames[file_path] then
-			local mode, err = lfs.attributes(file_path, "mode");
-			module:log("warn", "Unexpected %s in upload storage: %s", mode or "file", err or file);
+	local upload_dir_mode, err, errno = lfs.attributes(upload_dir, "mode");
+	if upload_dir_mode == "directory" then
+		for file in lfs.dir(upload_dir) do
+			local file_path = join_path(upload_dir, file);
+			if file ~= "." and file ~= ".." and not expected_filenames[file_path] then
+				local mode, err = lfs.attributes(file_path, "mode");
+				module:log("warn", "Unexpected %s in upload storage: %s", mode or "file", err or file);
+			end
 		end
+	elseif upload_dir_mode then
+		module:log("warn", "Unexpected type of upload directory: %s", upload_dir_mode);
+	elseif err and errno ~= ENOENT then
+		module:log("debug", "Could not determine type of upload directory: %s");
 	end
 
 	module:log("info", "Uploaded files total: %s in %d files", B(sum), count);
