@@ -796,7 +796,7 @@ end
 function handlers.get_affiliations(origin, stanza, affiliations, service)
 	local ok, nodes = service:get_nodes(stanza.attr.from);
 	if not ok then
-		origin.send(pubsub_error_reply(stanza, err));
+		origin.send(pubsub_error_reply(stanza, nodes));
 		return true;
 	end
 	local node = affiliations.attr.node;
