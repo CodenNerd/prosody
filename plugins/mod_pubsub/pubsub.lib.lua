@@ -809,10 +809,10 @@ function handlers.get_affiliations(origin, stanza, affiliations, service)
 			:tag("affiliations");
 
 	local jid = service.config.normalize_jid(stanza.attr.from);
-	for node, node_obj in pairs(nodes) do
+	for node_, node_obj in pairs(nodes) do
 		local affiliation = node_obj.affiliations[jid];
 		if affiliation then
-			reply:tag("affiliation", { node = node; affiliation = affiliation }):up();
+			reply:tag("affiliation", { node = node_; affiliation = affiliation }):up();
 		end
 	end
 
