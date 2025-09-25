@@ -98,53 +98,106 @@ local function initialize_host(host)
 end;
 prosody.events.add_handler("host-activated", initialize_host, 100);
 
+local function provider_helpers(provider_type)
+	local function get_provider(host)
+		local host_session = hosts[host];
+		if not host_session then
+			return nil, "unknown host";
+		end
+		local provider = host_session[provider_type];
+		if not provider then
+			return nil, "no "..provider_type.." provider";
+		end
+		return provider;
+	end
+
+	local function get_provider_method(host, method_name)
+		local provider, err = get_provider(host);
+		if not provider then
+			return nil, err;
+		end
+		local method = provider[method_name];
+		if not method then
+			return nil, "method not implemented";
+		end
+		return method;
+	end
+
+	local function call_method(host, method_name, log_message, pre_event, post_event, event, ...)
+		local method, method_err = get_provider_method(host, method_name);
+		if not method then return nil, method_err; end
+		if pre_event and prosody.events.fire_event(pre_event, event) ~= nil then
+			return nil, event.reason or "prevented by module";
+		end
+		local ok, err = method(...);
+		if not ok then
+			return ok, err;
+		end
+		if log_message then
+			log("info", "%s: %s@%s", log_message, event.username, event.host);
+		end
+		if post_event then
+			prosody.events.fire_event(post_event, event);
+		end
+		return ok, err;
+	end
+
+	local function call_quiet_method(host, method_name, ...)
+		return call_method(host, method_name, nil, nil, nil, nil, ...);
+	end
+
+	return get_provider, get_provider_method, call_method, call_quiet_method;
+end
+
+local get_provider, _, call_method, call_quiet_method = provider_helpers("users");
+
 local function test_password(username, host, password)
-	return hosts[host].users.test_password(username, password);
+	return call_quiet_method(host, "test_password", username, password);
 end
 
 local function get_password(username, host)
-	return hosts[host].users.get_password(username);
+	return call_quiet_method(host, "get_password", username);
 end
 
 local function set_password(username, password, host, resource)
-	local ok, err = hosts[host].users.set_password(username, password);
-	if ok then
-		log("info", "Account password changed: %s@%s", username, host);
-		prosody.events.fire_event("user-password-changed", { username = username, host = host, resource = resource });
-	end
-	return ok, err;
+	return call_method(host, "set_password", "Account password changed", "pre-user-password-change", "user-password-changed", {
+		username = username, host = host, resource = resource
+	}, username, password);
 end
 
 local function get_account_info(username, host)
-	local method = hosts[host].users.get_account_info;
-	if not method then return nil, "method not supported"; end
-	return method(username);
+	return call_quiet_method(host, "get_account_info", username);
 end
 
 local function user_exists(username, host)
-	if hosts[host].sessions[username] then return true; end
-	return hosts[host].users.user_exists(username);
+	if hosts[host].sessions[username] then
+		-- Shortcut for online users, we know they exist :)
+		return true;
+	end
+	return call_quiet_method(host, "user_exists", username);
 end
 
 local function create_user(username, password, host)
-	local ok, err = hosts[host].users.create_user(username, password);
-	if ok then
-		log("info", "User account created: %s@%s", username, host);
-	end
-	return ok, err;
+	return call_method(host, "create_user", "User account created", "pre-create-user", "user-created", {
+		username = username, host = host
+	}, username, password);
 end
 
 local function delete_user(username, host)
-	local ok, err = hosts[host].users.delete_user(username);
+	local ok, err = call_method(host, "delete_user", "User account deleted", "pre-delete-user", "user-deleted", {
+		username = username, host = host
+	}, username);
 	if not ok then return nil, err; end
-	log("info", "User account deleted: %s@%s", username, host);
-	prosody.events.fire_event("user-deleted", { username = username, host = host });
 	return storagemanager.purge(username, host);
 end
 
 local function user_is_enabled(username, host)
-	local method = hosts[host].users.is_enabled;
-	if method then return method(username); end
+	local ret, err = call_quiet_method(host, "is_enabled", username);
+	if ret ~= nil then
+		return ret;
+	elseif err ~= "method not implemented" then
+		return nil, err;
+	end
 
 	-- Fallback
 	local info, err = get_account_info(username, host);
@@ -160,58 +213,54 @@ local function user_is_enabled(username, host)
 end
 
 local function enable_user(username, host)
-	local method = hosts[host].users.enable;
-	if not method then return nil, "method not supported"; end
-	local ret, err = method(username);
-	if ret then
-		log("info", "User account enabled: %s@%s", username, host);
-		prosody.events.fire_event("user-enabled", { username = username, host = host });
-	end
-	return ret, err;
+	return call_method(host, "enable", "User account enabled", "pre-enable-user", "user-enabled", {
+		username = username, host = host
+	}, username);
 end
 
 local function disable_user(username, host, meta)
-	local method = hosts[host].users.disable;
-	if not method then return nil, "method not supported"; end
-	local ret, err = method(username, meta);
-	if ret then
-		log("info", "User account disabled: %s@%s", username, host);
-		prosody.events.fire_event("user-disabled", { username = username, host = host, meta = meta });
-	end
-	return ret, err;
+	return call_method(host, "disable", "User account disabled", "pre-disable-user", "user-disabled", {
+		username = username, host = host, meta = meta
+	}, username, meta);
 end
 
+
 local function users(host)
-	return hosts[host].users.users();
+	return call_quiet_method(host, "users");
 end
 
 local function get_sasl_handler(host, session)
-	return hosts[host].users.get_sasl_handler(session);
+	return call_quiet_method(host, "get_sasl_handler", session);
 end
 
-local function get_provider(host)
-	return hosts[host].users;
-end
+local _, _, call_authz_method, call_quiet_authz_method = provider_helpers("authz");
+
 
 local function get_user_role(user, host)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
-
-	return hosts[host].authz.get_user_role(user);
+	return call_quiet_authz_method(host, "get_user_role", user);
 end
 
 local function set_user_role(user, host, role_name)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
 
-	local role, err = hosts[host].authz.set_user_role(user, role_name);
-	if role then
-		log("info", "Account %s@%s role changed to %s", user, host, role_name);
-		prosody.events.fire_event("user-role-changed", {
-			username = user, host = host, role = role;
-		});
+	local event = { username = user, host = host, role_name = role_name, role = nil };
+	local role, err = call_authz_method(
+		host,
+		"set_user_role",
+		"Account role changed to <"..role_name..">",
+		"pre-user-role-change",
+		nil,
+		event,
+		user,
+		role_name
+	);
+	if not role then
+		return nil, err;
 	end
-	return role, err;
+	event.role = role;
+	prosody.events.fire_event("user-role-changed", event);
+	return role;
 end
 
 local function create_user_with_role(username, password, host, role)
@@ -240,51 +289,58 @@ local function create_user_with_role(username, password, host, role)
 end
 
 local function user_can_assume_role(user, host, role_name)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
-
-	return hosts[host].authz.user_can_assume_role(user, role_name);
+	return call_quiet_authz_method(host, "user_can_assume_role", user, role_name);
 end
 
 local function add_user_secondary_role(user, host, role_name)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
 
-	local role, err = hosts[host].authz.add_user_secondary_role(user, role_name);
-	if role then
-		prosody.events.fire_event("user-role-added", {
-			username = user, host = host, role_name = role_name, role = role;
-		});
+	local event = { username = user, host = host, role_name = role_name, role = nil };
+	local role, err = call_authz_method(
+		host,
+		"add_user_secondary_role",
+		"Account gained role <"..role_name..">",
+		"pre-add-user-role",
+		"user-role-added",
+		event,
+		user,
+		role_name
+	);
+	if not role then
+		return nil, err;
 	end
-	return role, err;
+	event.role = role;
+	prosody.events.fire_event("user-role-added", event);
+	return role;
 end
 
 local function remove_user_secondary_role(user, host, role_name)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
 
-	local ok, err = hosts[host].authz.remove_user_secondary_role(user, role_name);
-	if ok then
-		prosody.events.fire_event("user-role-removed", {
-			username = user, host = host, role_name = role_name;
-		});
-	end
-	return ok, err;
+	return call_authz_method(
+		host,
+		"remove_user_secondary_role",
+		"Account lost role <"..role_name..">",
+		"pre-remove-user-role",
+		"user-role-removed",
+		{ username = user, host = host, role_name = role_name },
+		user,
+		role_name
+	);
 end
 
 local function get_user_secondary_roles(user, host)
-	if host and not hosts[host] then return false; end
 	if type(user) ~= "string" then return false; end
-
-	return hosts[host].authz.get_user_secondary_roles(user);
+	return call_quiet_authz_method(host, "get_user_secondary_roles", user);
 end
 
 local function get_jid_role(jid, host)
 	local jid_node, jid_host = jid_split(jid);
 	if host == jid_host and jid_node then
-		return hosts[host].authz.get_user_role(jid_node);
+		return call_quiet_authz_method(host, "get_user_role", jid_node);
 	end
-	return hosts[host].authz.get_jid_role(jid);
+	return call_quiet_authz_method(host, "get_jid_role", jid);
 end
 
 local function set_jid_role(jid, host, role_name)
@@ -292,7 +348,7 @@ local function set_jid_role(jid, host, role_name)
 	if host == jid_host then
 		return nil, "unexpected-local-jid";
 	end
-	return hosts[host].authz.set_jid_role(jid, role_name)
+	return call_quiet_authz_method(host, "set_jid_role", jid, role_name);
 end
 
 local strict_deprecate_is_admin;
@@ -312,26 +368,23 @@ local function is_admin(jid, host)
 end
 
 local function get_users_with_role(role, host)
-	if not hosts[host] then return false; end
 	if type(role) ~= "string" then return false; end
-	return hosts[host].authz.get_users_with_role(role);
+	return call_quiet_authz_method(host, "get_users_with_role", role);
 end
 
 local function get_jids_with_role(role, host)
-	if host and not hosts[host] then return false; end
 	if type(role) ~= "string" then return false; end
-	return hosts[host].authz.get_jids_with_role(role);
+	return call_quiet_authz_method(host, "get_jids_with_role", role);
 end
 
 local function get_role_by_name(role_name, host)
-	if host and not hosts[host] then return false; end
 	if type(role_name) ~= "string" then return false; end
-	return hosts[host].authz.get_role_by_name(role_name);
+	return call_quiet_authz_method(host, "get_role_by_name", role_name);
 end
 
 local function get_all_roles(host)
 	if host and not hosts[host] then return false; end
-	return hosts[host].authz.get_all_roles();
+	return call_quiet_authz_method(host, "get_all_roles");
 end
 
 return {
