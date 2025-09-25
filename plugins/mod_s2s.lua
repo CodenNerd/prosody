@@ -200,11 +200,29 @@ function route_to_existing_session(event)
 			host.sendq = queue.new(sendq_size);
 		end
 		if not host.sendq:push(st.clone(stanza)) then
-			host.log("warn", "stanza [%s] not queued ", stanza.name);
-			event.origin.send(st.error_reply(stanza, "wait", "resource-constraint", "Outgoing stanza queue full"));
-			return true;
+			-- We shouldn't get here, because the last stanza
+			-- should have triggered the 'full?' check.
+			host.log("warn", "Pending connection %s->%s has full queue - unable to queue %s stanza", from_host, to_host, stanza.name);
+			return false;
+		else
+			host.log("debug", "stanza [%s] queued ", stanza.name);
 		end
-		host.log("debug", "stanza [%s] queued ", stanza.name);
+
+		if host.sendq:full() then
+			-- A pending connection with a full queue could indicate
+			-- a stalled connection (trouble authenticating, etc.).
+			-- Our choice is to keep it open, and discard any additional stanzas
+			-- (which could cause inconsistencies, e.g. in MUC joins) or
+			-- force-close the connection.
+			host.log("warn", "Pending connection %s->%s has full queue - closing connection and bouncing stanzas", from_host, to_host);
+			host:close({
+				condition = "resource-constraint",
+				text = "Too many pending stanzas for this connection",
+			}, nil, "Too many pending stanzas for this connection");
+		end
+
+		-- Although in some cases the stanza was not delivered, it
+		-- was processed (queued or bounced), so we return true
 		return true;
 	elseif host.type == "local" or host.type == "component" then
 		log("error", "Trying to send a stanza to ourselves??")
