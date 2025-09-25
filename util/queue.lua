@@ -21,6 +21,8 @@ local function new(size, allow_wrapping)
 		_items = t;
 		size = size;
 		count = function (self) return items; end;
+		empty = function () return items == 0; end;
+		full = function () return items == size; end;
 		push = function (self, item)
 			if items >= size then
 				if allow_wrapping then
