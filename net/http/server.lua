@@ -287,7 +287,7 @@ function handle_request(conn, request, finish_cb)
 
 	if err then
 		response.status_code = err_code;
-		response:send(events.fire_event("http-error", { code = err_code, message = err, response = response }));
+		response:send(events.fire_event("http-error", { code = err_code, message = err, request = request, response = response }));
 		return;
 	end
 
@@ -312,7 +312,7 @@ function handle_request(conn, request, finish_cb)
 
 		if err then
 			response.status_code = err_code;
-			response:send(events.fire_event("http-error", { code = err_code, message = err, response = response }));
+			response:send(events.fire_event("http-error", { code = err_code, message = err, request = request, response = response }));
 			return;
 		end
 
