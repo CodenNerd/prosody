@@ -2,8 +2,12 @@ module:set_global();
 
 local server = require "prosody.net.http.server";
 local codes = require "prosody.net.http.codes";
+local http_errors = require "prosody.net.http.errors".registry;
+local json = require "prosody.util.json";
+local new_short_id = require "prosody.util.id".short;
 local xml_escape = require "prosody.util.stanza".xml_escape;
 local render = require "prosody.util.interpolation".new("%b{}", xml_escape);
+
 
 local show_private = module:get_option_boolean("http_errors_detailed", false);
 local always_serve = module:get_option_boolean("http_errors_always_show", true);
@@ -76,6 +80,27 @@ module:hook_object_event(server, "http-error", function (event)
 	end
 	return get_page(event.code, (show_private and event.private_message) or event.message or (event.error and event.error.text));
 end);
+
+-- Return error object as JSON if that's what requester prefers
+module:hook_object_event(server, "http-error", function (event)
+	if event.request.headers.accept:match("^application/json") then
+		event.response.headers.content_type = "application/json";
+		local error = event.request and event.error;
+		if not error then
+			error = http_errors[event.response.status_code];
+		end
+		local extra = error.extra;
+		return json.encode({
+			instance_id = error.instance_id or new_short_id();
+			type = error.type;
+			condition = error.condition;
+			text = error.text or (show_private and event.private_message) or event.message;
+			namespace = extra and extra.namespace;
+			subcondition = extra and extra.condition;
+			source = error.source or "mod_http_errors";
+		});
+	end
+end, 0.1);
 
 -- Way to use the template for other things so to give a consistent appearance
 module:hook("http-message", function (event)
