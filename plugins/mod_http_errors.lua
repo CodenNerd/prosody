@@ -83,7 +83,7 @@ end);
 
 -- Return error object as JSON if that's what requester prefers
 module:hook_object_event(server, "http-error", function (event)
-	if event.request.headers.accept:match("^application/json") then
+	if event.request and (event.request.headers.accept or ""):match("^application/json") then
 		event.response.headers.content_type = "application/json";
 		local error = event.request and event.error;
 		if not error then
