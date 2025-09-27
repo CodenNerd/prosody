@@ -79,9 +79,11 @@ end);
 
 -- Used to respond to idle sessions (those with waiting requests)
 function on_destroy_request(request)
+	local log = request.log or log;
 	log("debug", "Request destroyed: %s", request);
 	local session = sessions[request.context.sid];
 	if session then
+		log = session.log or log;
 		local requests = session.requests;
 		for i, r in ipairs(requests) do
 			if r == request then
@@ -116,9 +118,8 @@ function session_timeout(now, session, context, reason) -- luacheck: ignore 212/
 end
 
 function handle_POST(event)
-	log("debug", "Handling new request %s: %s\n----------", event.request, event.request.body);
-
 	local request, response = event.request, event.response;
+	local log = request.log or log;
 	response.on_destroy = on_destroy_request;
 	local body = request.body;
 
@@ -266,6 +267,7 @@ local runner_callbacks = { };
 -- Handle the <body> tag in the request payload.
 function stream_callbacks.streamopened(context, attr)
 	local request, response = context.request, context.response;
+	local log = request.log or log;
 	local sid, rid = attr.sid, tonumber(attr.rid);
 	log("debug", "BOSH body open (sid: %s)", sid or "<none>");
 	context.rid = rid;
@@ -383,7 +385,7 @@ function stream_callbacks.streamopened(context, attr)
 					body_attr.wait = tostring(session.bosh_wait);
 					body_attr.authid = sid;
 					body_attr.secure = "true";
-					body_attr.ver  = '1.6';
+					body_attr.ver = '1.6';
 					body_attr.from = session.host;
 					body_attr["xmlns:xmpp"] = xmlns_xbosh;
 					body_attr["xmpp:version"] = "1.0";
@@ -473,7 +475,6 @@ end
 
 function stream_callbacks.handlestanza(context, stanza)
 	if context.ignore then return; end
-	log("debug", "BOSH stanza received: %s\n", stanza:top_tag());
 	local session = sessions[context.sid];
 	if session then
 		if stanza.attr.xmlns == xmlns_bosh then
