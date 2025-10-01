@@ -156,7 +156,7 @@ function session_events.streamopened(session, event)
 	else
 		-- Normally STARTTLS would be offered, is mod_tls loaded?
 		(session.log or log)("warn", "No stream features to offer on insecure session. Check encryption and security settings.");
-		session:close{ condition = "undefined-condition", text = "No connection encryptio available" };
+		session:close{ condition = "undefined-condition", text = "No connection encryption available" };
 	end
 end
 
