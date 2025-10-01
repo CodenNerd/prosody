@@ -149,15 +149,14 @@ function session_events.streamopened(session, event)
 			limits:reset();
 		end
 		send(features);
+	elseif session.secure then
+		-- Here SASL should be offered, is mod_saslauth and mod_auth_* loaded and working correctly?
+		(session.log or log)("warn", "No stream features to offer on secure session. Check authentication settings.");
+		session:close{ condition = "undefined-condition", text = "No authentication method available" };
 	else
-		if session.secure then
-			-- Here SASL should be offered
-			(session.log or log)("warn", "No stream features to offer on secure session. Check authentication settings.");
-		else
-			-- Normally STARTTLS would be offered
-			(session.log or log)("warn", "No stream features to offer on insecure session. Check encryption and security settings.");
-		end
-		session:close{ condition = "undefined-condition", text = "No stream features to proceed with" };
+		-- Normally STARTTLS would be offered, is mod_tls loaded?
+		(session.log or log)("warn", "No stream features to offer on insecure session. Check encryption and security settings.");
+		session:close{ condition = "undefined-condition", text = "No connection encryptio available" };
 	end
 end
 
