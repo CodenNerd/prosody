@@ -2465,6 +2465,44 @@ function def_env.debug:cert_index(path)
 	return true, ("Showing %d certificates in %s"):format(c, path);
 end
 
+describe_command [[debug:ping(localhost, remotehost) - Sends a ping to a remote XMPP server while printing debug logs]]
+function def_env.debug:ping(localhost, remotehost, timeout)
+	localhost = select(2, jid_split(localhost));
+	remotehost = select(2, jid_split(remotehost));
+	if not localhost then
+		return nil, "Invalid sender hostname";
+	elseif not prosody.hosts[localhost] then
+		return nil, "No such local host";
+	end
+	if not remotehost then
+		return nil, "Invalid destination hostname";
+	elseif prosody.hosts[remotehost] then
+		return nil, "Both hosts are local";
+	end
+
+	local iq = st.iq{ from=localhost, to=remotehost, type="get", id=new_id()}
+			:tag("ping", {xmlns="urn:xmpp:ping"});
+	local time_start = time.now();
+	local print = self.session.print;
+
+	local writing = false;
+	local sink = logger.add_simple_sink(function (source, level, message)
+		if writing then return; end
+		writing = true;
+		print(source, level, message);
+		writing = false;
+	end);
+
+	return module:context(localhost):send_iq(iq, nil, timeout):finally(function()
+		if not logger.remove_sink(sink) then
+			module:log("warn", "Unable to remove watch:log() sink");
+		end
+	end):next(function(pong)
+		return ("pong from %s on %s in %gs"):format(pong.stanza.attr.from, pong.origin.id, time.now() - time_start);
+	end);
+end
+
+
 def_env.role = new_section("Role and access management");
 
 describe_command [[role:list(host) - List known roles]]
