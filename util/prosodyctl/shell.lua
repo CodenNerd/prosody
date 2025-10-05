@@ -99,7 +99,7 @@ local function start(arg) --luacheck: ignore 212/arg
 		client.events.add_handler("received", function(stanza)
 			if stanza.name == "repl-output" or stanza.name == "repl-result" then
 				local dest = io.stdout;
-				if stanza.attr.type == "error" then
+				if stanza.name == "repl-result" or stanza.attr.type == "error" then
 					errors = errors + 1;
 					dest = io.stderr;
 				end
