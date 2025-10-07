@@ -992,6 +992,44 @@ function def_env.config:reload()
 	return ok, (ok and "Config reloaded (you may need to reload modules to take effect)") or tostring(err);
 end
 
+describe_command [[config:dump() - Display the current server configuration from memory]]
+function def_env.config:dump()
+	local config = require "prosody.core.configmanager".getconfig();
+	local serialize = require "prosody.util.serialization".serialize;
+
+	local print = self.session.print;
+
+	print("-- Configuration dumped from Prosody "..prosody.version);
+	print("-- at "..os.date("%Y-%m-%d %R").."\n");
+	print("-- Global options\n")
+	for opt, val in it.sorted_pairs(config["*"]) do
+		print(opt.." = "..serialize(val, "pretty").."\n");
+	end
+
+	print("-- Hosts and components\n");
+
+	local n_hosts = 0;
+	for host in it.filter("*", it.sorted_pairs(config)) do
+		n_hosts = n_hosts + 1;
+		local host_config = config[host];
+		if host_config.type ~= "component" then
+			print(("\nVirtualHost %q"):format(host));
+		else
+			print(("\nComponent %q %q"):format(host, host_config.component_module));
+		end
+
+		for opt, val in it.sorted_pairs(host_config) do
+			if opt ~= "component_module" then
+				print("\t"..opt.." = "..serialize(val, "pretty").."\n");
+			end
+		end
+	end
+
+	print("\n-- End of configuration --");
+
+	return true, "Showing server configuration with "..n_hosts.." hosts";
+end
+
 def_env.c2s = new_section("Commands to manage local client-to-server sessions");
 
 local function get_jid(session)
