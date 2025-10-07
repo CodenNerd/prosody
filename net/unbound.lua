@@ -119,6 +119,8 @@ local function measure(_qclass, _qtype)
 	return measure;
 end
 
+local count = measure;
+
 local function lookup(callback, qname, qtype, qclass)
 	if not unbound then initialize(); end
 	qtype = qtype and s_upper(qtype) or "A";
@@ -132,6 +134,7 @@ local function lookup(callback, qname, qtype, qclass)
 		m();
 		waiting_queries[ret] = nil;
 		if a then
+			count(qclass, qtype, #a);
 			prep_answer(a);
 			log_query("debug", "Results for %s %s %s: %s (%s)", qname, qclass, qtype, a.rcode == 0 and (#a .. " items") or a.status,
 				a.secure and "Secure" or a.bogus or "Insecure"); -- Insecure as in unsigned
@@ -230,7 +233,7 @@ local wrapper = {
 	};
 }
 
-_M.instrument = function(measure_) measure = measure_; end;
+_M.instrument = function(measure_, count_) measure, count = measure_, count_; end;
 
 function _M.resolver() return wrapper; end
 
