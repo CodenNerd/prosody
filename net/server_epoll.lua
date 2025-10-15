@@ -551,7 +551,7 @@ function interface:onwritable()
 		-- Sent the whole 'data' but there's more in the buffer
 		ok, err, partial = nil, "timeout", ok;
 	end
-	self:debug("Sent %d out of %d buffered bytes", ok and #data or partial or 0, #buffer);
+	self:noise("Sent %d out of %d buffered bytes", ok and #data or partial or 0, #buffer);
 	if ok then -- all the data we had was sent successfully
 		self:set(nil, false);
 		if cfg.keep_buffers and type(buffer) == "table" then
