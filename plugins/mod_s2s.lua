@@ -43,6 +43,7 @@ local secure_domains, insecure_domains =
 local require_encryption = module:get_option_boolean("s2s_require_encryption", true);
 local stanza_size_limit = module:get_option_integer("s2s_stanza_size_limit", 1024*512, 10000);
 local sendq_size = module:get_option_integer("s2s_send_queue_size", 1024*32, 1);
+local block_retries = module:get_option_boolean("s2s_block_immediate_retries", false);
 
 local advertised_idle_timeout = 14*60; -- default in all net.server implementations
 local network_settings = module:get_option("network_settings");
@@ -241,6 +242,9 @@ function route_to_new_session(event)
 	local from_host, to_host, stanza = event.from_host, event.to_host, event.stanza;
 	log("debug", "opening a new outgoing connection for this stanza");
 	local host_session = s2s_new_outgoing(from_host, to_host);
+	if block_retries then
+		host_session.block_retries = true;
+	end
 	host_session.version = 1;
 
 	-- Store in buffer

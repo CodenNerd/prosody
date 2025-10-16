@@ -91,8 +91,17 @@ local function destroy_session(session, reason, bounce_reason)
 	log("debug", "Destroying %s session %s->%s%s%s", session.direction, session.from_host, session.to_host, reason and ": " or "", reason or "");
 
 	if session.direction == "outgoing" then
-		hosts[session.from_host].s2sout[session.to_host] = nil;
-		session:bounce_sendq(bounce_reason or reason);
+		if session.block_retries then
+			-- Reject any attempts to communicate with the failed domain
+			-- while we are bouncing the stanzas
+			session.send = function () return false; end
+			session.sends2s = function () return false; end
+			session:bounce_sendq(bounce_reason or reason);
+			hosts[session.from_host].s2sout[session.to_host] = nil;
+		else
+			hosts[session.from_host].s2sout[session.to_host] = nil;
+			session:bounce_sendq(bounce_reason or reason);
+		end
 	elseif session.direction == "incoming" then
 		if session.outgoing and hosts[session.to_host].s2sout[session.from_host] == session then
 			hosts[session.to_host].s2sout[session.from_host] = nil;
