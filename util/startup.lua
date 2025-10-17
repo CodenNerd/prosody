@@ -450,7 +450,7 @@ function startup.instrument()
 				buckets = { 1 / 1024; 1 / 256; 1 / 64; 1 / 16; 1 / 4; 1; 4 };
 		});
 		local c = statsmanager.metric("histogram", "prosody_dns_response", "records", "DNS response records", { "qclass"; "qtype" }, {
-			buckets = { 1; 2; 4; 8; 16 } })
+			buckets = { 0; 1; 2; 4; 8; 16 } })
 		local function m_times(qclass, qtype) return timed(m:with_labels(qclass, qtype)); end
 		local function m_counts(qclass, qtype, num) return c:with_labels(qclass, qtype):sample(num); end
 		adns.instrument(m_times, m_counts);
