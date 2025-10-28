@@ -447,7 +447,7 @@ function startup.instrument()
 	local adns = require "prosody.net.adns";
 	if adns.instrument then
 		local m = statsmanager.metric("histogram", "prosody_dns", "seconds", "DNS lookups", { "qclass"; "qtype" }, {
-				buckets = { 1 / 1024; 1 / 256; 1 / 64; 1 / 16; 1 / 4; 1; 4 };
+			buckets = { 1 / 1024; 1 / 256; 1 / 64; 1 / 16; 1 / 4; 1; 4; 16 };
 		});
 		local c = statsmanager.metric("histogram", "prosody_dns_response", "records", "DNS response records", { "qclass"; "qtype" }, {
 			buckets = { 0; 1; 2; 4; 8; 16 } })
