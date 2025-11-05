@@ -412,7 +412,7 @@ function api:get_option_enum(name, default, ...)
 end
 
 function api:context(host)
-	local is_global;
+	local is_global = false;
 	if not host or host == "*" then
 		host, is_global = "*", true;
 	end
