@@ -122,6 +122,12 @@ local flush_reasons = module:metric(
 	{ "reason" }
 );
 
+local hold_reasons = module:metric(
+	"counter", "hold", "",
+	"CSI queue held",
+	{ "reason" }
+);
+
 local flush_sizes = module:metric("histogram", "flush_stanza_count", "", "Number of stanzas flushed at once", {},
 	{ buckets = { 0, 1, 2, 4, 8, 16, 32, 64, 128, 256 } }):with_labels();
 
@@ -144,6 +150,7 @@ local function manage_buffer(stanza, session)
 		module:fire_event("csi-flushing", { session = session });
 		session.conn:resume_writes();
 	else
+		hold_reasons:with_labels(why or "unimportant"):add(1);
 		session.log("debug", "Holding buffer (%s; queue size is %d)", why or "unimportant", session.csi_counter);
 		stanza = with_timestamp(stanza, jid.join(session.username, session.host))
 	end
