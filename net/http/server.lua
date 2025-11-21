@@ -365,7 +365,7 @@ function _M.send_response(response, body)
 	response.conn:write(t_concat(output));
 	response:done();
 end
-function _M.send_file(response, f)
+function _M.send_file(response, f, length)
 	if response.is_head_request then
 		if f.close then f:close(); end
 		return _M.send_head_response(response);
@@ -379,14 +379,11 @@ function _M.send_file(response, f)
 			incomplete[response.conn] = nil;
 			return;
 		end
-		local chunk = f:read(blocksize);
-		if chunk then
-			if chunked then
-				chunk = ("%x\r\n%s\r\n"):format(#chunk, chunk);
-			end
-			-- io.write("."); io.flush();
-			response.conn:write(chunk);
-		else
+		local chunksize = blocksize;
+		if length and length < chunksize then chunksize = length; end
+
+		local chunk = chunksize > 0 and f:read(chunksize);
+		if not chunk then
 			incomplete[response.conn] = nil;
 			if f.close then f:close(); end
 			if chunked then
@@ -394,6 +391,11 @@ function _M.send_file(response, f)
 			end
 			-- io.write("\n");
 			return response:done();
+		else
+			if length then length = length - #chunk; end
+			if chunked then chunk = ("%x\r\n%s\r\n"):format(#chunk, chunk); end
+			-- io.write("."); io.flush();
+			response.conn:write(chunk);
 		end
 	end
 	_M.write_headers(response);
