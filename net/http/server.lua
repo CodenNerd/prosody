@@ -13,7 +13,7 @@ local cache = require "prosody.util.cache";
 local codes = require "prosody.net.http.codes";
 local promise = require "prosody.util.promise";
 local errors = require "prosody.util.error";
-local blocksize = 2^16;
+local blocksize = 65536;
 local async = require "prosody.util.async";
 local id = require"prosody.util.id";
 
