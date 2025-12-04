@@ -1,8 +1,9 @@
+-- Represents an outgoing reliable stanza queue
+
 local queue = require("prosody.util.queue");
 
-local lib = { smqueue = {} }
-
-local smqueue = lib.smqueue;
+-- SM queue methods
+local smqueue = {};
 
 function smqueue:push(v)
 	self._head = self._head + 1;
@@ -10,10 +11,15 @@ function smqueue:push(v)
 	assert(self._queue:push(v));
 end
 
+-- Call when receiver has acknowledged some stanzas
+-- `h` (sent by the receiver) is the running count of
+-- successfully received stanzas
 function smqueue:ack(h)
 	if h < self._tail then
+		-- h is less than a previous h
 		return nil, "tail"
 	elseif h > self._head then
+		-- h is greater than the number of stanzas we sent
 		return nil, "head"
 	end
 
@@ -25,6 +31,7 @@ function smqueue:ack(h)
 		if not v then return nil, "pop" end
 		table.insert(acked, v);
 	end
+
 	return acked
 end
 
@@ -44,13 +51,23 @@ function smqueue:table()
 	return t
 end
 
-local function freeze(q) return { head = q._head; tail = q._tail } end
+local smqueue_mt = {
+	__name = "smqueue";
+	__index = smqueue;
+	__len = smqueue.count_unacked;
+	-- Return a simple object for serialization
+	__freeze = function (q) return { head = q._head; tail = q._tail } end;
+};
 
-local queue_mt = { __name = "smqueue"; __index = smqueue; __len = smqueue.count_unacked; __freeze = freeze }
+local lib = {};
 
 function lib.new(size)
 	assert(size > 0);
-	return setmetatable({ _head = 0; _tail = 0; _queue = queue.new(size, true) }, queue_mt)
+	return setmetatable({
+		_head = 0;
+		_tail = 0;
+		_queue = queue.new(size, true);
+	}, smqueue_mt)
 end
 
 return lib
