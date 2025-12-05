@@ -2510,22 +2510,22 @@ function def_env.debug:cert_index(path)
 end
 
 describe_command [[debug:ping(localhost, remotehost) - Sends a ping to a remote XMPP server while printing debug logs]]
-function def_env.debug:ping(localhost, remotehost, timeout)
-	localhost = select(2, jid_split(localhost));
-	remotehost = select(2, jid_split(remotehost));
+function def_env.debug:ping(localjid, remotejid, timeout)
+	local localnode, localhost, localresource = jid_split(localjid);
+	local remotenode, remotehost, remoteresource = jid_split(remotejid);
 	if not localhost then
-		return nil, "Invalid sender hostname";
+		return nil, "Invalid sender JID";
 	elseif not prosody.hosts[localhost] then
 		return nil, "No such local host";
+	elseif localresource then
+		return nil, "Server can't send ping from local resource"; -- Would require creating a temporary session with bound resource and everything
 	end
 	if not remotehost then
-		return nil, "Invalid destination hostname";
-	elseif prosody.hosts[remotehost] then
-		return nil, "Both hosts are local";
+		return nil, "Invalid destination JID";
 	end
-
-	local iq = st.iq{ from=localhost, to=remotehost, type="get", id=new_id()}
+	local iq = st.iq { from = jid_join(localnode, localhost); to = jid_join(remotenode, remotehost, remoteresource); type = "get"; id = new_id() }
 			:tag("ping", {xmlns="urn:xmpp:ping"});
+
 	local time_start = time.now();
 	local print = self.session.print;
 
