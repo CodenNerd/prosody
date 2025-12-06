@@ -10,6 +10,7 @@ local jid_join = require "prosody.util.jid".join;
 
 local is_stanza = require"prosody.util.stanza".is_stanza;
 local t_concat = table.concat;
+local t_move = require "prosody.util.table".move;
 
 local have_dbisql, dbisql = pcall(require, "prosody.util.sql");
 local have_sqlite, sqlite = pcall(require, "prosody.util.sqlite3");
@@ -430,9 +431,7 @@ local function archive_where(query, args, where)
 	if query.ids then
 		local nids, nargs = #query.ids, #args;
 		where[#where + 1] = "\"key\" IN (" .. string.rep("?", nids, ",") .. ")";
-		for i, id in ipairs(query.ids) do
-			args[nargs+i] = id;
-		end
+		t_move(query.ids, 1, nids, nargs + 1, args);
 	end
 end
 local function archive_where_id_range(query, args, where)
