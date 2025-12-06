@@ -32,6 +32,11 @@ function smqueue:ack(h)
 		table.insert(acked, v);
 	end
 
+	local c = self._next_checkpoint;
+	if c and h >= c then
+		self:_call_checkpoints(h);
+	end
+
 	return acked
 end
 
@@ -51,6 +56,33 @@ function smqueue:table()
 	return t
 end
 
+-- Add a 'checkpoint' which will call a function when all the stanzas
+-- currently in the queue have been successfully delivered and acknowledged
+function smqueue:add_checkpoint(cb, ud)
+	table.insert(self._checkpoints, { self._head, cb, ud });
+	if not self._next_checkpoint then
+		self._next_checkpoint = self._head;
+	end
+end
+};
+
+function smqueue:_call_checkpoints(h)
+	local checkpoints = self._checkpoints;
+
+	-- Pop the checkpoint info and update the next checkpoint info
+	local c = table.remove(checkpoints, 1);
+	self._next_checkpoint = checkpoints[1] and checkpoints[1][1] or nil;
+
+	-- Call the callback
+	local cb, ud = c[2], c[3];
+	cb(ud);
+
+	-- In case we passed over multiple checkpoints, call them also
+	if h >= self._next_checkpoint then
+		return self:_call_checkpoints(h);
+	end
+end
+
 local smqueue_mt = {
 	__name = "smqueue";
 	__index = smqueue;
@@ -67,6 +99,7 @@ function lib.new(size)
 		_head = 0;
 		_tail = 0;
 		_queue = queue.new(size, true);
+		_checkpoints = {};
 	}, smqueue_mt)
 end
 
