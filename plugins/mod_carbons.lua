@@ -144,6 +144,7 @@ local function message_handler(event, c2s)
 						:tag("forwarded", { xmlns = xmlns_forward })
 							:add_child(copy):reset();
 
+				carbon:set_meta("archive-id", stanza:get_meta("archive-id"));
 			end
 
 			carbon.attr.to = session.full_jid;
