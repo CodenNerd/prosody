@@ -583,9 +583,7 @@ if cleanup_after ~= math.huge then
 				cleanup_map:set(cut_off, user, true);
 				module:log("error", "Could not delete messages for user '%s': %s", user, err);
 			end
-			local wait, done = async.waiter();
-			module:add_timer(0.01, done);
-			wait();
+			async.sleep(0.1);
 		end
 		module:log("info", "Deleted %d expired messages for %d users", sum, num_users);
 		cleanup_done();
