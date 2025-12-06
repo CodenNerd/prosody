@@ -461,6 +461,7 @@ local function message_handler(event, c2s)
 			local clone_for_other_handlers = st.clone(stanza);
 			local id = ok;
 			clone_for_other_handlers:tag("stanza-id", { xmlns = xmlns_st_id, by = store_user.."@"..host, id = id }):up();
+			clone_for_other_handlers:set_meta("archive-id", id);
 			event.stanza = clone_for_other_handlers;
 			schedule_cleanup(store_user);
 			module:fire_event("archive-message-added", { origin = origin, stanza = clone_for_storage, for_user = store_user, id = id });
