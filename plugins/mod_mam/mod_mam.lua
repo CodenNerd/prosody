@@ -190,6 +190,7 @@ module:hook("iq-set/self/"..xmlns_mam..":query", function(event)
 	local first, last;
 	local count = 0;
 	local complete = "true";
+	local oldest, newest;
 	for id, item, when in data do
 		count = count + 1;
 		if count > qmax then
@@ -212,6 +213,13 @@ module:hook("iq-set/self/"..xmlns_mam..":query", function(event)
 		if not first then first = id; end
 		last = id;
 
+		if not newest or when > newest then
+			newest = when;
+		end
+		if not oldest or when < oldest then
+			oldest = when;
+		end
+
 		if flip then
 			results[count] = fwd_st;
 		else
@@ -232,6 +240,15 @@ module:hook("iq-set/self/"..xmlns_mam..":query", function(event)
 		:tag("fin", { xmlns = xmlns_mam, complete = complete })
 			:add_child(rsm.generate {
 				first = first, last = last, count = total }));
+
+	module:fire_event("archive-query-result", {
+		origin = origin;
+		stanza = stanza;
+		first_time = oldest;
+		last_time = newest;
+		first_id = reverse and last or first;
+		last_id = reverse and first or last;
+	});
 
 	-- That's all folks!
 	module:log("debug", "Archive query id=%s completed, %d items returned", qid or stanza.attr.id, complete and count or count - 1);
@@ -589,7 +606,6 @@ if cleanup_after ~= math.huge then
 		module:log("info", "Deleted %d expired messages for %d users", sum, num_users);
 		cleanup_done();
 	end);
-
 else
 	module:log("debug", "Archive expiry disabled");
 	-- Don't ask the backend to count the potentially unbounded number of items,
