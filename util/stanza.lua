@@ -300,6 +300,27 @@ function stanza_mt:find(path)
 	until not self
 end
 
+function stanza_mt:set_meta(k, v)
+	local meta = self.meta;
+	if not meta then
+		if v == nil then
+			return; -- no need to unset something that isn't set
+		end
+		meta = {};
+		self.meta = meta;
+	end
+	meta[k] = v;
+	return self;
+end
+
+function stanza_mt:get_meta(k)
+	local meta = self.meta;
+	if not meta then
+		return nil;
+	end
+	return meta[k];
+end
+
 local function _clone(stanza, only_top)
 	local attr = {};
 	for k,v in pairs(stanza.attr) do attr[k] = v; end
