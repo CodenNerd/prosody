@@ -64,7 +64,6 @@ function smqueue:add_checkpoint(cb, ud)
 		self._next_checkpoint = self._head;
 	end
 end
-};
 
 function smqueue:_call_checkpoints(h)
 	local checkpoints = self._checkpoints;
