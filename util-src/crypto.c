@@ -29,6 +29,7 @@ typedef unsigned __int32 uint32_t;
 #include <openssl/obj_mac.h>
 #include <openssl/param_build.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 
 #if (LUA_VERSION_NUM == 501)
 #define luaL_setfuncs(L, R, N) luaL_register(L, NULL, R)
