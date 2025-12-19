@@ -82,7 +82,7 @@ local function start(arg) --luacheck: ignore 212/arg
 		elseif err == "missing-value" then
 			print("Expected a value to follow command-line option: "..where);
 		end
-		os.exit(1);
+		os.exit(64);
 	end
 
 	if arg[1] then
@@ -100,7 +100,9 @@ local function start(arg) --luacheck: ignore 212/arg
 			if stanza.name == "repl-output" or stanza.name == "repl-result" then
 				local dest = io.stdout;
 				if stanza.name == "repl-result" or stanza.attr.type == "error" then
-					errors = errors + 1;
+					if stanza.attr.type == "error" then
+						errors = errors + 1;
+					end
 					dest = io.stderr;
 				end
 				if stanza.attr.eol == "0" then
@@ -110,7 +112,7 @@ local function start(arg) --luacheck: ignore 212/arg
 				end
 			end
 			if stanza.name == "repl-result" then
-				os.exit(errors);
+				os.exit(errors > 0 and 1 or 0);
 			end
 			return true;
 		end, 1);
@@ -141,7 +143,7 @@ local function start(arg) --luacheck: ignore 212/arg
 			}):text(password or ""));
 		else
 			io.stderr:write("Internal error - unexpected input request type "..tostring(stanza.attr.type).."\n");
-			os.exit(1);
+			os.exit(76);
 		end
 		return true;
 	end, 2);
@@ -174,7 +176,7 @@ local function start(arg) --luacheck: ignore 212/arg
 			print("** Unable to connect to server - is it running? Is mod_admin_shell enabled?");
 			print("** Connection error: "..err);
 		end
-		os.exit(1);
+		os.exit(69);
 	end
 	server.loop();
 end
