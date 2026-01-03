@@ -4,6 +4,7 @@ TRUNK
 ## New
 
 - Support for Lua 5.5
+- Signals outgoing s2s connection failure by closing existing incoming s2s
 
 13.0.0
 ======
