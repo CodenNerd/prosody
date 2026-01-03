@@ -5,6 +5,26 @@ TRUNK
 
 - Support for Lua 5.5
 - Signals outgoing s2s connection failure by closing existing incoming s2s
+- Server-to-server connection attempt retry blocking
+- DNS resolver connection filters
+- pubsub: support for retrieve-affiliitations
+- HTTP errors may be returned as JSON if Accept-ed
+- mod_http_file_share warns about missing or unexpected files in storage
+- mod_offline can now optionally expire old messages (like mod_mam)
+
+### Shell
+
+- Tables printed as tab-separated values by `prosodyctl shell` when piped to commands
+- `prosodyctl shell --quiet` suppresses status message
+- `config:dump()` command showing the currently applied config
+- `debug:ping()` command shows a slice of debug logs while pinging a JID
+
+## API
+
+- `api:context()` with an unknown host no longer works
+- `request` is now included in `http-error` events
+- mod_mam has a new `archive-query-result` event
+- stanza meta api
 
 13.0.0
 ======
