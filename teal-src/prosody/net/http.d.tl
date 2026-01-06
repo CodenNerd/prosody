@@ -17,6 +17,9 @@ local record lib
 
 	record http_client_options
 		sslctx : sslctx
+		suppress_errors : boolean
+		connection_pooling : boolean
+		use_dane : boolean
 	end
 
 	record http_options
