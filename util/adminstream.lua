@@ -254,7 +254,7 @@ local function new_server(sessions, stanza_handler)
 	function s.listeners.ondisconnect(conn, err)
 		local session = sessions[conn];
 		if session then
-			session.log("info", "Admin client disconnected: %s", err or "connection closed");
+			session.log("debug", "Admin client disconnected: %s", err or "connection closed");
 			session.conn = nil;
 			sessions[conn]  = nil;
 			s.events.fire_event("disconnected", { session = session });
@@ -327,7 +327,7 @@ local function new_client()
 	end
 
 	function listeners.ondisconnect(conn, err) --luacheck: ignore 212/conn
-		client.log("info", "Admin client disconnected: %s", err or "connection closed");
+		client.log("debug", "Admin client disconnected: %s", err or "connection closed");
 		client.conn = nil;
 		client.events.fire_event("disconnected");
 	end
