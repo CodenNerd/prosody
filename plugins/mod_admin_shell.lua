@@ -20,6 +20,7 @@ local server = require "prosody.net.server";
 local schema = require "prosody.util.jsonschema";
 local st = require "prosody.util.stanza";
 local parse_args = require "prosody.util.argparse".parse;
+local dt = require "prosody.util.datetime";
 
 local _G = _G;
 
@@ -2533,7 +2534,7 @@ function def_env.debug:ping(localjid, remotejid, timeout)
 	local sink = logger.add_simple_sink(function (source, level, message)
 		if writing then return; end
 		writing = true;
-		print(source, level, message);
+		print(dt.time(time.now()), source, level, message);
 		writing = false;
 	end);
 
