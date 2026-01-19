@@ -591,13 +591,17 @@ local function check(arg)
 			end
 		end
 		for host, options in enabled_hosts() do
+			-- This is meant to prod people away from xmpp.example.com towards example.com,
+			-- but will not do the right thing with second level hierarchies like .co.uk
+			-- This could be improved by using the Public Suffix List or a similar method.
 			local host_options = set.new(it.to_array(it.keys(options)));
 			local subdomain = host:match("^[^.]+");
+			local suggestion = host:gsub("^[^.]+%.", "");
 			if not(host_options:contains("component_module")) and (subdomain == "jabber" or subdomain == "xmpp"
-			   or subdomain == "chat" or subdomain == "im") then
+			   or subdomain == "chat" or subdomain == "im") and (suggestion:match("%."))then
 				print("");
 				print("    Suggestion: If "..host.. " is a new host with no real users yet, consider renaming it now to");
-				print("     "..host:gsub("^[^.]+%.", "")..". You can use SRV records to redirect XMPP clients and servers to "..host..".");
+				print("     "..suggestion..". You can use SRV records to redirect XMPP clients and servers to "..host..".");
 				print("     For more information see: https://prosody.im/doc/dns");
 			end
 		end
