@@ -51,17 +51,21 @@ module:add_item("shell-command", {
 	section_desc = "View user activity data";
 	name = "list_inactive";
 	desc = "List inactive user accounts";
+	flags = {
+		bool_params = { only_unknown = true, hide_logins = true };
+	};
 	args = {
 		{ name = "host"; type = "string" };
 		{ name = "duration"; type = "string" };
 	};
 	host_selector = "host";
-	handler = function(self, host, duration) --luacheck: ignore 212/self
+	handler = function(self, host, duration, opts) --luacheck: ignore 212/self
 		local um = require "prosody.core.usermanager";
 		local duration_sec = require "prosody.util.human.io".parse_duration(duration or "");
 		if not duration_sec then
 			return false, ("Invalid duration %q - try something like \"30d\""):format(duration);
 		end
+		local only_unknown, show_logins = opts.only_unknown, not opts.hide_logins;
 
 		local now = os.time();
 		local n_inactive, n_unknown = 0, 0;
@@ -73,18 +77,25 @@ module:add_item("shell-command", {
 				local created_at;
 				if user_info then
 					created_at  = user_info.created;
-					if created_at and (now - created_at) > duration_sec then
+					if created_at and (now - created_at) > duration_sec and not only_unknown then
 						self.session.print(username, "");
 						n_inactive = n_inactive + 1;
 					end
 				end
 				if not created_at then
 					n_unknown = n_unknown + 1;
+					if only_unknown then
+						self.session.print(username, "");
+					end
 				end
-			elseif (now - last_active) > duration_sec then
+			elseif show_logins and (now - last_active) > duration_sec and not only_unknown then
 				self.session.print(username, os.date("%Y-%m-%dT%T", last_active));
 				n_inactive = n_inactive + 1;
 			end
+		end
+
+		if only_unknown then
+			return true, ("%d accounts with unknown last activity"):format(n_unknown);
 		end
 
 		if n_unknown > 0 then
