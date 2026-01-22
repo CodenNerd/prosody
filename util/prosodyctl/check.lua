@@ -12,6 +12,7 @@ local modulemanager = require "prosody.core.modulemanager";
 local async = require "prosody.util.async";
 local httputil = require "prosody.util.http";
 local human_units = require "prosody.util.human.units";
+local have_psl, publicsuffix = pcall(require, "psl");
 
 local function api(host)
 	return setmetatable({ name = "prosodyctl.check"; host = host; log = prosody.log }, { __index = moduleapi })
@@ -588,15 +589,16 @@ local function check(arg)
 				print("    You need to move the following option"..(n>1 and "s" or "")..": "..table.concat(it.to_array(misplaced_options), ", "));
 			end
 		end
+		local psl = have_psl and publicsuffix.latest(api("*"):get_option_string("public_suffix_file", nil));
 		for host, options in enabled_hosts() do
 			-- This is meant to prod people away from xmpp.example.com towards example.com,
 			-- but will not do the right thing with second level hierarchies like .co.uk
-			-- This could be improved by using the Public Suffix List or a similar method.
+			-- unless lua-psl is installed
 			local host_options = set.new(it.to_array(it.keys(options)));
 			local subdomain = host:match("^[^.]+");
 			local suggestion = host:gsub("^[^.]+%.", "");
 			if not(host_options:contains("component_module")) and (subdomain == "jabber" or subdomain == "xmpp"
-			   or subdomain == "chat" or subdomain == "im") and (suggestion:match("%."))then
+			   or subdomain == "chat" or subdomain == "im") and (suggestion:match("%.") or psl and not psl:is_public_suffix(suggestion)) then
 				print("");
 				print("    Suggestion: If "..host.. " is a new host with no real users yet, consider renaming it now to");
 				print("     "..suggestion..". You can use SRV records to redirect XMPP clients and servers to "..host..".");
