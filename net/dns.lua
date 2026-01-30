@@ -16,6 +16,7 @@ local socket = require "socket";
 local have_timer, timer = pcall(require, "prosody.util.timer");
 local new_ip = require "prosody.util.ip".new_ip;
 local have_util_net, util_net = pcall(require, "prosody.util.net");
+local time_now = require "prosody.util.time".now;
 
 local log = require "prosody.util.logger".init("dns");
 
@@ -237,7 +238,7 @@ end
 
 
 local function prune(rrs, time, soft)    -- - - - - - - - - - - - - - -  prune
-	time = time or socket.gettime();
+	time = time or time_now();
 	for i,rr in ipairs(rrs) do
 		if rr.tod then
 			if rr.tod < time then
@@ -300,7 +301,7 @@ end
 
 local cache_metatable = {};    -- - - - - - - - - - - - - - - -  cache_metatable
 function cache_metatable.__tostring(cache)
-	local time = socket.gettime();
+	local time = time_now();
 	local t = {};
 	for class,types in pairs(cache) do
 		for type,names in pairs(types) do
@@ -318,7 +319,7 @@ end
 
 
 function dns.random(...)    -- - - - - - - - - - - - - - - - - - -  dns.random
-	math.randomseed(math.floor(10000*socket.gettime()) % 0x80000000);
+	math.randomseed(math.floor(10000 * time_now()) % 0x80000000);
 	dns.random = math.random;
 	return dns.random(...);
 end
@@ -813,7 +814,7 @@ function resolver:peek (qname, qtype, qclass, n)    -- - - - - - - - - - - -  pe
 		if not (rrs and rrs[1]) then return end
 		return self:peek(rrs[1].cname, qtype, qclass, n - 1);
 	end
-	if prune(rrs, socket.gettime()) and qtype == '*' or not next(rrs) then
+	if prune(rrs, time_now()) and qtype == '*' or not next(rrs) then
 		set(self.cache, qclass, qtype, qname, nil);
 		return nil;
 	end
@@ -824,7 +825,7 @@ end
 
 function resolver:purge(soft)    -- - - - - - - - - - - - - - - - - - -  purge
 	if soft == 'soft' then
-		self.time = socket.gettime();
+		self.time = time_now();
 		for class,types in pairs(self.cache or {}) do
 			for type,names in pairs(types) do
 				for name,rrs in pairs(names) do
@@ -859,7 +860,7 @@ function resolver:query(qname, qtype, qclass)    -- - - - - - - - - - -- query
 		packet = header..question,
 		server = self.best_server,
 		delay  = 1,
-		retry  = socket.gettime() + self.delays[1];
+		retry  = time_now() + self.delays[1];
 		qclass = qclass;
 		qtype  = qtype;
 		qname  = qname;
@@ -914,7 +915,7 @@ function resolver:servfail(sock, err)
 	sock = self:voidsocket(sock);
 
 	-- Find all requests to the down server, and retry on the next server
-	self.time = socket.gettime();
+	self.time = time_now();
 	log("debug", "servfail %d (of %d)", num, #self.server);
 	for id,queries in pairs(self.active) do
 		for question,o in pairs(queries) do
@@ -970,7 +971,7 @@ end
 
 function resolver:receive(rset)    -- - - - - - - - - - - - - - - - -  receive
 	--print('receive');  print(self.socket);
-	self.time = socket.gettime();
+	self.time = time_now();
 	rset = rset or self.socket;
 
 	local response;
@@ -1019,7 +1020,7 @@ end
 
 function resolver:feed(sock, packet, force)
 	--print('receive'); print(self.socket);
-	self.time = socket.gettime();
+	self.time = time_now();
 
 	local response = self:decode(packet, force);
 	if response and self.active[response.header.id]
@@ -1072,7 +1073,7 @@ function resolver:pulse()    -- - - - - - - - - - - - - - - - - - - - -  pulse
 	while self:receive() do end
 	if not next(self.active) then return nil; end
 
-	self.time = socket.gettime();
+	self.time = time_now();
 	for id,queries in pairs(self.active) do
 		for question,o in pairs(queries) do
 			if self.time >= o.retry then

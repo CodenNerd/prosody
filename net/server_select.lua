@@ -48,7 +48,7 @@ local coroutine_yield = coroutine.yield
 --// extern libs //--
 
 local luasocket = use "socket" or require "socket"
-local luasocket_gettime = luasocket.gettime
+local time_now = require "prosody.util.time".now;
 local inet = require "prosody.util.net";
 local inet_pton = inet.pton;
 local sslconfig = require "prosody.util.sslconfig";
@@ -919,7 +919,7 @@ local add_task do
 	local new_data = {};
 
 	function add_task(delay, callback)
-		local current_time = luasocket_gettime();
+		local current_time = time_now();
 		delay = delay + current_time;
 		if delay >= current_time then
 			table_insert(new_data, {delay, callback});
@@ -970,7 +970,7 @@ end
 loop = function(once) -- this is the main loop of the program
 	if quitting then return "quitting"; end
 	if once then quitting = "once"; end
-	_currenttime = luasocket_gettime( )
+	_currenttime = time_now();
 	repeat
 		-- Fire timers
 	local next_timer_time = math_huge;
@@ -1003,7 +1003,7 @@ loop = function(once) -- this is the main loop of the program
 			handler:force_close()	 -- forced disconnect
 			_closelist[ handler ] = nil;
 		end
-		_currenttime = luasocket_gettime( )
+		_currenttime = time_now();
 
 		-- Check for socket timeouts
 		if _currenttime - _starttime > _checkinterval then
@@ -1151,7 +1151,7 @@ use "setmetatable" ( _socketlist, { __mode = "k" } )
 use "setmetatable" ( _readtimes, { __mode = "k" } )
 use "setmetatable" ( _writetimes, { __mode = "k" } )
 
-_starttime = luasocket_gettime( )
+_starttime = time_now();
 
 local function setlogger(new_logger)
 	local old_logger = log;

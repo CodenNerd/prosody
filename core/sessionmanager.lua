@@ -24,7 +24,7 @@ local generate_identifier = require "prosody.util.id".short;
 local sessionlib = require "prosody.util.session";
 
 local initialize_filters = require "prosody.util.filters".initialize;
-local gettime = require "socket".gettime;
+local time_now = require "prosody.util.time".now;
 
 local _ENV = nil;
 -- luacheck: std none
@@ -35,7 +35,7 @@ local function new_session(conn)
 	sessionlib.set_logger(session);
 	sessionlib.set_conn(session, conn);
 
-	session.conntime = gettime();
+	session.conntime = time_now();
 	local filter = initialize_filters(session);
 	local w = conn.write;
 

@@ -1,7 +1,7 @@
 local st = require "prosody.util.stanza";
 local new_xmpp_stream = require "prosody.util.xmppstream".new;
 local sessionlib = require "prosody.util.session";
-local gettime = require "prosody.util.time".now;
+local time_now = require "prosody.util.time".now;
 local runner = require "prosody.util.async".runner;
 local add_task = require "prosody.util.timer".add_task;
 local events = require "prosody.util.events";
@@ -197,7 +197,7 @@ local function new_server(sessions, stanza_handler)
 		sessionlib.set_logger(session);
 		sessionlib.set_conn(session, conn);
 
-		session.conntime = gettime();
+		session.conntime = time_now();
 		session.type = "admin";
 
 		local stream = new_xmpp_stream(session, stream_callbacks);

@@ -1,5 +1,5 @@
 
-local gettime = require "prosody.util.time".now
+local time_now = require "prosody.util.time".now;
 local setmetatable = setmetatable;
 
 local _ENV = nil;
@@ -9,7 +9,7 @@ local throttle = {};
 local throttle_mt = { __index = throttle };
 
 function throttle:update()
-	local newt = gettime();
+	local newt = time_now();
 	local elapsed = newt - self.t;
 	self.t = newt;
 	local balance = (self.rate * elapsed) + self.balance;
@@ -40,7 +40,7 @@ function throttle:poll(cost, split)
 end
 
 local function create(max, period)
-	return setmetatable({ rate = max / period, max = max, t = gettime(), balance = max }, throttle_mt);
+	return setmetatable({ rate = max / period, max = max, t = time_now(), balance = max }, throttle_mt);
 end
 
 return {

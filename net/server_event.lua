@@ -54,8 +54,7 @@ local inet = require "prosody.util.net";
 local inet_pton = inet.pton;
 local sslconfig = require "prosody.util.sslconfig";
 local tls_impl = require "prosody.net.tls_luasec";
-
-local socket_gettime = socket.gettime
+local time_now = require "prosody.util.time".now;
 
 local log = require ("prosody.util.logger").init("socket")
 
@@ -521,7 +520,7 @@ local function handleclient( client, ip, port, server, pattern, listener, sslctx
 	local interface = {
 		type = "client";
 		conn = client;
-		currenttime = socket_gettime( );  -- safe the origin
+		currenttime = time_now();  -- safe the origin
 		writebuffer = {};  -- writebuffer
 		writebufferlen = 0;  -- length of writebuffer
 		send = client.send;  -- caching table lookups
@@ -918,7 +917,7 @@ end
 local function add_task(delay, callback)
 	local event_handle;
 	event_handle = base:addevent(nil, 0, function ()
-		local ret = callback(socket_gettime());
+		local ret = callback(time_now());
 		if ret then
 			return 0, ret;
 		elseif event_handle then
