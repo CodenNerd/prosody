@@ -75,7 +75,7 @@ local function check_turn_service(turn_service, ping_service)
 	local result = { warnings = {} };
 
 	-- Create UDP socket for communication with the server
-	local sock = assert(require "socket".udp());
+	local sock = assert(socket.udp());
 	do
 		local ok, err = sock:setsockname("*", 0);
 		if not ok then
@@ -1146,8 +1146,7 @@ local function check(arg)
 				local http_internal_host = http_host;
 				local http_url = api(host):get_option_string("http_external_url");
 				if http_url then
-					local url_parse = require "socket.url".parse;
-					local external_url_parts = url_parse(http_url);
+					local external_url_parts = socket_url.parse(http_url);
 					if external_url_parts then
 						http_host = external_url_parts.host;
 					else
