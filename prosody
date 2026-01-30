@@ -85,7 +85,7 @@ local function loop()
 		prosody.events.fire_event("very-bad-error", {error = err, traceback = traceback});
 	end
 
-	local sleep = require"socket".sleep;
+	local sleep = require "prosody.util.time".sleep;
 	local server = require "prosody.net.server";
 
 	while select(2, xpcall(server.loop, catch_uncaught_error)) ~= "quitting" do

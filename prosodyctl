@@ -65,13 +65,13 @@ startup.prosodyctl();
 local configmanager = require "prosody.core.configmanager";
 local modulemanager = require "prosody.core.modulemanager"
 local prosodyctl = require "prosody.util.prosodyctl"
-local socket = require "socket"
 local dependencies = require "prosody.util.dependencies";
 local lfs = dependencies.softreq "lfs";
 
 -----------------------
 
 local parse_args = require "prosody.util.argparse".parse;
+local sleep = require "prosody.util.time".sleep;
 local human_io = require "prosody.util.human.io";
 
 local show_message, show_warning = prosodyctl.show_message, prosodyctl.show_warning;
@@ -265,7 +265,7 @@ function commands.start(arg)
 					show_message("Prosody is still not running. Please give it some time or check your log files for errors.");
 					return 2;
 				end
-				socket.sleep(0.5);
+				sleep(0.5);
 				i = i + 1;
 			end
 			show_message("Started");
@@ -346,7 +346,7 @@ function commands.stop(arg)
 				show_message("Prosody is still running. Please give it some time or check your log files for errors.");
 				return 2;
 			end
-			socket.sleep(0.5);
+			sleep(0.5);
 			i = i + 1;
 		end
 		show_message("Stopped");
@@ -456,6 +456,7 @@ function commands.about(arg)
 		-- These diverge from the module._VERSION convention
 		readline = "Version";
 	}
+	local socket = dependencies.softreq"socket";
 	local lunbound = dependencies.softreq"lunbound";
 	local lxp = dependencies.softreq"lxp";
 	local hashes = dependencies.softreq"prosody.util.hashes";
