@@ -2,21 +2,9 @@
 -- transition period while we update all require calls.
 
 if (...) == "prosody.loader" then
-	local function is_relative(path)
-		local path_sep = package.config:sub(1,1);
-		return ((path_sep == "/" and path:sub(1,1) ~= "/")
-			or (path_sep == "\\" and (path:sub(1,1) ~= "/" and path:sub(2,3) ~= ":\\")))
-	end
-	local function filter_relative_paths(path)
-		if is_relative(path) then return ""; end
-	end
-	local function sanitise_paths(paths)
-		return (paths:gsub("[^;]+;?", filter_relative_paths):gsub(";;+", ";"));
-	end
-
 	-- For require"util.foo" also look in paths equivalent to "prosody.util.foo"
-	package.path = sanitise_paths(CFG_SOURCEDIR.."/?.lua;"..package.path:gsub("([^;]*)(?[^;]*)", "%1prosody/%2;%1%2"));
-	package.cpath = sanitise_paths(CFG_SOURCEDIR.."/?.so;"..package.cpath:gsub("([^;]*)(?[^;]*)", "%1prosody/%2;%1%2"));
+	package.path = package.path:gsub("([^;]*)(?[^;]*)", "%1prosody/%2;%1%2");
+	package.cpath = package.cpath:gsub("([^;]*)(?[^;]*)", "%1prosody/%2;%1%2");
 else
 	-- When requiring "prosody.x", also look for "x"
 	for i = #package.searchers, 1, -1 do
