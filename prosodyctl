@@ -456,7 +456,7 @@ function commands.about(arg)
 		-- These diverge from the module._VERSION convention
 		readline = "Version";
 	}
-	local socket = dependencies.softreq"socket";
+	dependencies.softreq"socket";
 	local lunbound = dependencies.softreq"lunbound";
 	local lxp = dependencies.softreq"lxp";
 	local hashes = dependencies.softreq"prosody.util.hashes";
