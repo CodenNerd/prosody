@@ -433,22 +433,22 @@ function handle_download(event, path) -- GET /uploads/:slot+filename
 
 	local request_range = request.headers.range;
 	local response_range;
+	local response_len = nil; -- until eof
 	-- "bytes=0-" just means "the whole file", so ignore it along with non-byte-range requests
 	if request_range and request_range ~= "bytes=0-" and request_range:find("^bytes=") then
 		local size = tonumber(filesize);
-		local last_byte = string.format("%d", size - 1);
-		local range_start, range_end = request_range:match("^bytes=(%d+)%-(%d*)$")
-		-- Only support resumption, ie ranges from somewhere in the middle until the end of the file.
-		if range_end == "" or range_end == last_byte then
-			local pos = tonumber(range_start);
-			local new_pos = pos < size and handle:seek("set", pos);
-			if new_pos and new_pos < size then
-				response_range = string.format("bytes %d-%d/%s", range_start, last_byte, filesize);
-				filesize = string.format("%d", size-pos);
-			else
-				handle:close();
-				return 416;
-			end
+		local range_start, range_end = request_range:match("^bytes=(%d*)%-(%d*)$")
+		local pos, stop = tonumber(range_start) or 0, tonumber(range_end) or size-1;
+		if range_start == "" then pos, stop = size - stop, size - 1; end
+		if pos <= stop and stop < size then
+			pos = handle:seek("set", pos);
+			response_len = stop - pos + 1;
+			response_range = string.format("bytes %d-%d/%s", pos, stop, filesize);
+			filesize = string.format("%d", response_len);
+		else
+			handle:close();
+			module:log("debug", "Invalid range requested: %q", request_range)
+			return 416;
 		end
 	end
 
@@ -479,7 +479,7 @@ function handle_download(event, path) -- GET /uploads/:slot+filename
 	response.headers.x_frame_options = "DENY"; -- COMPAT IE missing support for CSP frame-ancestors
 	response.headers.x_xss_protection = "1; mode=block";
 
-	return response:send_file(handle);
+	return response:send_file(handle, response_len);
 end
 
 if expiry < math.huge and not external_base_url then
