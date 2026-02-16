@@ -261,7 +261,7 @@ module:add_item("shell-command", {
 	flags = {
 		array_params = { role = true, group = have_group_invites };
 		value_params = { expires_after = true };
-		bool_params = { admin = true };
+		bool_params = { admin = true, reusable = true };
 	};
 
 	handler = function (self, user_jid, opts) --luacheck: ignore 212/self
@@ -285,7 +285,7 @@ module:add_item("shell-command", {
 		local invite = assert(create_account(username, {
 			roles = roles;
 			groups = groups;
-		}, ttl));
+		}, ttl, opts.reusable));
 
 		return true, invite.landing_page or invite.uri;
 	end;
@@ -330,7 +330,7 @@ module:add_item("shell-command", {
 	host_selector = "user_jid";
 	flags = {
 		value_params = { expires_after = true };
-		bool_params = { allow_registration = true };
+		bool_params = { allow_registration = true, reusable = true };
 	};
 
 	handler = function (self, user_jid, opts) --luacheck: ignore 212/self
@@ -345,7 +345,7 @@ module:add_item("shell-command", {
 				return nil, "Unable to parse duration: "..opts.expires_after;
 			end
 		end
-		local invite, err = create_contact(username, opts and opts.allow_registration, nil, ttl);
+		local invite, err = create_contact(username, opts and opts.allow_registration, nil, ttl, opts.reusable);
 		if not invite then return nil, err; end
 		return true, invite.landing_page or invite.uri;
 	end;
