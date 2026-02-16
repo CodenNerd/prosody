@@ -77,9 +77,9 @@ local function create_invite(invite_action, invite_jid, allow_registration, addi
 end
 
 -- Create invitation to register an account (optionally restricted to the specified username)
-function create_account(account_username, additional_data, ttl) --luacheck: ignore 131/create_account
+function create_account(account_username, additional_data, ttl, reusable) --luacheck: ignore 131/create_account
 	local jid = account_username and (account_username.."@"..module.host) or module.host;
-	return create_invite("register", jid, true, additional_data, ttl);
+	return create_invite("register", jid, true, additional_data, ttl, reusable);
 end
 
 -- Create invitation to reset the password for an account
@@ -88,8 +88,8 @@ function create_account_reset(account_username, ttl) --luacheck: ignore 131/crea
 end
 
 -- Create invitation to become a contact of a local user
-function create_contact(username, allow_registration, additional_data, ttl) --luacheck: ignore 131/create_contact
-	return create_invite("roster", username.."@"..module.host, allow_registration, additional_data, ttl);
+function create_contact(username, allow_registration, additional_data, ttl, reusable) --luacheck: ignore 131/create_contact
+	return create_invite("roster", username.."@"..module.host, allow_registration, additional_data, ttl, reusable);
 end
 
 -- Create invitation to register an account and join a user group
