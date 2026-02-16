@@ -386,6 +386,7 @@ module:add_item("shell-command", {
 
 		print("Created:", os.date("%Y-%m-%d %T", invite.created_at));
 		print("Expires:", os.date("%Y-%m-%d %T", invite.expires));
+		print("Single-use:", not invite.reusable and "Yes" or "No");
 
 		print("");
 
