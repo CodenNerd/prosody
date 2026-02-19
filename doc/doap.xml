@@ -911,6 +911,7 @@
         <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0478.html"/>
         <xmpp:version>0.2.0</xmpp:version>
         <xmpp:since>13.0.0</xmpp:since>
+        <xmpp:status>complete</xmpp:status>
       </xmpp:SupportedXep>
     </implements>
     <implements>
@@ -918,6 +919,7 @@
         <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0486.html"/>
         <xmpp:version>0.1.0</xmpp:version>
         <xmpp:since>13.0.0</xmpp:since>
+        <xmpp:status>complete</xmpp:status>
       </xmpp:SupportedXep>
     </implements>
   </Project>
