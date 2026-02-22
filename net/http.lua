@@ -339,7 +339,11 @@ local function request(self, u, ex, callback)
 		end
 	end
 
-	local http_service = basic_resolver.new(host, port_number, "tcp", { servername = req.host; use_dane = use_dane });
+	local http_service = basic_resolver.new(host, port_number, "tcp", {
+		servername = req.host;
+		use_dane = use_dane;
+		filter = ex.target_filter;
+	});
 	connect(http_service, listener, { sslctx = sslctx }, req);
 
 	self.events.fire_event("request", { http = self, request = req, url = u });
