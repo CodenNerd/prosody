@@ -342,7 +342,7 @@ local function request(self, u, ex, callback)
 	local http_service = basic_resolver.new(host, port_number, "tcp", {
 		servername = req.host;
 		use_dane = use_dane;
-		filter = ex.target_filter;
+		filter = ex and ex.target_filter;
 	});
 	connect(http_service, listener, { sslctx = sslctx }, req);
 
