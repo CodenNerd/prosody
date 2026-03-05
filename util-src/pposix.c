@@ -663,13 +663,17 @@ static int lc_abort(lua_State *L) {
 }
 
 const char *pipe_flag_names[] = {
+#if !defined(__APPLE__)
 	"cloexec",
 	"direct",
+#endif
 	"nonblock"
 };
 const int pipe_flag_values[] = {
+#if !defined(__APPLE__)
 	O_CLOEXEC,
 	O_DIRECT,
+#endif
 	O_NONBLOCK
 };
 
