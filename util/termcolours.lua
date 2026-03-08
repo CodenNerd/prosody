@@ -18,13 +18,6 @@ local m_floor = math.floor;
 local type = type;
 local setmetatable = setmetatable;
 local pairs = pairs;
-
-local windows;
-if os.getenv("WINDIR") then
-	windows = require "prosody.util.windows";
-end
-local orig_color = windows and windows.get_consolecolor and windows.get_consolecolor();
-
 local _ENV = nil;
 -- luacheck: std none
 
@@ -35,13 +28,6 @@ local stylemap = {
 			["blue background"] = 44; ["magenta background"] = 45; ["cyan background"] = 46; ["white background"] = 47;
 			bold = 1, dark = 2, underline = 4, underlined = 4, normal = 0;
 		}
-
-local winstylemap = {
-	["0"] = orig_color, -- reset
-	["1"] = 7+8, -- bold
-	["1;33"] = 2+4+8, -- bold yellow
-	["1;31"] = 4+8 -- bold red
-}
 
 local cssmap = {
 	[1] = "font-weight: bold", [2] = "opacity: 0.5", [4] = "text-decoration: underline", [8] = "visibility: hidden",
@@ -115,19 +101,6 @@ local function setstyle(style)
 	if style ~= last then
 		io_write("\27["..style.."m");
 		last = style;
-	end
-end
-
-if windows then
-	function setstyle(style)
-		style = style or "0";
-		if style ~= last then
-			windows.set_consolecolor(winstylemap[style] or orig_color);
-			last = style;
-		end
-	end
-	if not orig_color then
-		function setstyle() end
 	end
 end
 
