@@ -83,8 +83,8 @@ function methods:next(cb)
 	local dns_resolver = adns.resolver();
 
 	local dns_lookups = {
-		ipv4 = do_dns_lookup(self, dns_resolver, "A", self.hostname, true);
 		ipv6 = do_dns_lookup(self, dns_resolver, "AAAA", self.hostname, true);
+		ipv4 = do_dns_lookup(self, dns_resolver, "A", self.hostname, true);
 		tlsa = do_dns_lookup(self, dns_resolver, "TLSA", ("_%d._%s.%s"):format(self.port, self.conn_type, self.hostname));
 	};
 
