@@ -45,7 +45,7 @@ Configure $APP_NAME prior to building.
                             Default is \$PREFIX/lib
 --datadir=DIR               Location where the server data should be stored.
                             Default is \$PREFIX/var/lib/$APP_DIRNAME
---lua-version=VERSION       Use specific Lua version: 5.2, 5.3, or 5.4
+--lua-version=VERSION       Use specific Lua version: 5.2, 5.3, 5.4, or 5.5
                             Default is auto-detected.
 --lua-suffix=SUFFIX         Versioning suffix to use in Lua filenames.
                             Default is "$LUA_SUFFIX" (lua$LUA_SUFFIX...)
