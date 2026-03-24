@@ -34,7 +34,7 @@ local m_min = math.min;
 local timestamp, datestamp = import("prosody.util.datetime", "datetime", "date");
 local default_max_items, max_max_items = 20, module:get_option_integer("max_archive_query_results", 50, 0);
 
-local cleanup_after = module:get_option_period("muc_log_expires_after", "1w");
+local cleanup_after = module:get_option_period("muc_log_expires_after", module:get_option("archive_expires_after", "1w"));
 
 local default_history_length = 20;
 local max_history_length = module:get_option_integer("max_history_messages", math.huge, 0);

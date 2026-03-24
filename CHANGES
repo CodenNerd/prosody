@@ -11,6 +11,7 @@ TRUNK
 - HTTP errors may be returned as JSON if Accept-ed
 - mod_http_file_share warns about missing or unexpected files in storage
 - mod_offline can now optionally expire old messages (like mod_mam)
+- mod_muc_mam honours `archive_expires_after` if `muc_log_expires_after` not set
 
 ### Shell
 
