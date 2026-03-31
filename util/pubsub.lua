@@ -9,6 +9,7 @@ local default_config = {
 	broadcaster = function () end;
 	subscriber_filter = function (subs) return subs end;
 	itemcheck = function () return true; end;
+	iteminfo = function () return nil; end;
 	get_affiliation = function () end;
 	normalize_jid = function (jid) return jid; end;
 	metadata_subset = {};
@@ -596,8 +597,21 @@ end
 
 function service:retract(node, actor, id, retract) --> ok, err
 	-- Access checking
-	if not self:may(node, actor, "retract") then
-		return false, "forbidden";
+	local may_retract = self:may(node, actor, "retract");
+
+	if not may_retract then
+		local node_obj = self.nodes[node];
+		local publish_model = node_obj and node_obj.config.publish_model;
+		local may_publish = (
+			publish_model == "open"
+			or (publish_model == "subscribers" and node_obj.subscribers[actor])
+		);
+		if not may_publish then
+			return false, "forbidden";
+		end
+		-- Otherwise, we continue on, with may_retract = false, which
+		-- indicates they cannot retract items published by *others*
+		-- but may still retract their own items
 	end
 	--
 	local node_obj = self.nodes[node];
@@ -605,9 +619,20 @@ function service:retract(node, actor, id, retract) --> ok, err
 		return false, "item-not-found";
 	end
 	if self.data[node] then
-		if not self.data[node]:get(id) then
+		local item = self.data[node]:get(id);
+		if not item then
 			return false, "item-not-found";
 		end
+
+		if not may_retract then
+			-- May not generally retract all items, so check if they are the publisher
+			local info = self.config.iteminfo(item);
+			local is_publisher = info and info.publisher and self:jids_equal(info.publisher, actor);
+			if not is_publisher then
+				return false, "forbidden";
+			end
+		end
+
 		local ok = self.data[node]:set(id, nil);
 		if not ok then
 			return nil, "internal-server-error";
