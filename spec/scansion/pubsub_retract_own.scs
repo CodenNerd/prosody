@@ -1,0 +1,152 @@
+# Pubsub: Support for retracting own items on third-party node
+
+[Client] Romeo
+	jid: admin@localhost
+	password: password
+
+// admin@localhost is assumed to have node creation privileges
+
+[Client] Juliet
+	jid: juliet@localhost
+	password: password
+
+[Client] Mercutio
+	jid: mercutio@localhost
+	password: password
+
+---------
+
+Romeo connects
+
+Romeo sends:
+	<iq type="set" to="pubsub.localhost" id='create1'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<create node="romeos_rambles/comments"/>
+			<configure>
+				<x xmlns="jabber:x:data" type="submit">
+					<field var="FORM_TYPE" type="hidden">
+						<value>http://jabber.org/protocol/pubsub#node_config</value>
+					</field>
+					<field var="pubsub#publish_model">
+						<value>subscribers</value>
+					</field>
+				</x>
+			</configure>
+		</pubsub>
+	</iq>
+
+Romeo receives:
+	<iq type="result" id='create1'/>
+
+Juliet connects
+
+Juliet sends:
+	<iq type="set" to="pubsub.localhost" id='jpub1'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<publish node="romeos_rambles/comments">
+				<item id="current">
+					<entry xmlns="http://www.w3.org/2005/Atom">
+						<title>Should fail, no permission</title>
+						<summary>Not yet a subscriber</summary>
+					</entry>
+				</item>
+			</publish>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="error" from="pubsub.localhost" id="jpub1">
+		<error type="auth">
+			<forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+		</error>
+	</iq>
+
+Juliet sends:
+	<iq type="set" to="pubsub.localhost" id='sub1'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<subscribe node="romeos_rambles/comments" jid="${Juliet's full JID}"/>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="result" id='sub1'/>
+
+Juliet sends:
+	<iq type="set" to="pubsub.localhost" id='jpub2'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<publish node="romeos_rambles/comments">
+				<item id="bedd9e0e-923f-465b-9e2e-139fc6ccc7e7">
+					<entry xmlns="http://www.w3.org/2005/Atom">
+						<title>Thoughts from Juliet</title>
+						<summary>O sweet sir, thy tender speech doth pierce my soul</summary>
+					</entry>
+				</item>
+			</publish>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<message from='pubsub.localhost' type='headline'>
+	  <event xmlns='http://jabber.org/protocol/pubsub#event'>
+	    <items node='romeos_rambles/comments' xmlns='http://jabber.org/protocol/pubsub#event'>
+	      <item id='bedd9e0e-923f-465b-9e2e-139fc6ccc7e7' publisher="${Juliet's JID}" xmlns='http://jabber.org/protocol/pubsub#event'>
+	        <entry xmlns='http://www.w3.org/2005/Atom'>
+	          <title xmlns='http://www.w3.org/2005/Atom'>
+	          Thoughts from Juliet
+	          </title>
+	          <summary xmlns='http://www.w3.org/2005/Atom'>
+	          O sweet sir, thy tender speech doth pierce my soul
+	          </summary>
+	        </entry>
+	      </item>
+	    </items>
+	  </event>
+	</message>
+
+Juliet receives:
+	<iq type="result" from="pubsub.localhost" id="jpub2"/>
+
+Mercutio connects
+
+Mercutio sends:
+	<iq type='set' to='pubsub.localhost' id='retract1'>
+		<pubsub xmlns='http://jabber.org/protocol/pubsub'>
+			<retract node='romeos_rambles/comments'>
+				<item id='bedd9e0e-923f-465b-9e2e-139fc6ccc7e7'/>
+			</retract>
+		</pubsub>
+	</iq>
+
+Mercutio receives:
+	<iq type="error" from="pubsub.localhost" id="retract1">
+		<error type="auth">
+			<forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+		</error>
+	</iq>
+
+
+Juliet sends:
+	<iq type='set' to='pubsub.localhost' id='retract2'>
+		<pubsub xmlns='http://jabber.org/protocol/pubsub'>
+			<retract node='romeos_rambles/comments'>
+				<item id='bedd9e0e-923f-465b-9e2e-139fc6ccc7e7'/>
+			</retract>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="result" from="pubsub.localhost" id="retract2"/>
+
+Romeo sends:
+	<iq type="set" to="pubsub.localhost" id='del1'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
+			<delete node="romeos_rambles/comments"/>
+		</pubsub>
+	</iq>
+
+Romeo receives:
+	<iq type="result" id='del1'/>
+
+Romeo disconnects
+
+// vim: syntax=xml:

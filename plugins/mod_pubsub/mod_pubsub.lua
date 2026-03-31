@@ -141,6 +141,12 @@ function is_item_stanza(item)
 	return st.is_stanza(item) and item.attr.xmlns == xmlns_pubsub and item.name == "item" and #item.tags == 1;
 end
 
+function get_item_metadata(item)
+	return {
+		publisher = item.attr.publisher;
+	};
+end
+
 -- Compose a textual representation of Atom payloads
 local summary_templates = module:get_option("pubsub_summary_templates", {
 	["http://www.w3.org/2005/Atom"] = "{@pubsub:title|and{*{@pubsub:title}*\n\n}}{summary|or{{author/name|and{{author/name} posted }}{title}}}";
@@ -231,6 +237,7 @@ function set_service(new_service)
 	service.config.itemstore = create_simple_itemstore;
 	service.config.broadcaster = simple_broadcast;
 	service.config.itemcheck = is_item_stanza;
+	service.config.iteminfo = get_item_metadata;
 	service.config.check_node_config = check_node_config;
 	service.config.get_affiliation = get_affiliation;
 
@@ -262,6 +269,7 @@ function module.load()
 		itemstore = create_simple_itemstore;
 		broadcaster = simple_broadcast;
 		itemcheck = is_item_stanza;
+		iteminfo = get_item_metadata;
 		check_node_config = check_node_config;
 		metadata_subset = {
 			"title";
