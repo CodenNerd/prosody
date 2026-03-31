@@ -1,0 +1,158 @@
+# Pubsub: Node 'authorize' access model
+
+[Client] Balthasar
+	jid: admin@localhost
+	password: password
+
+[Client] Romeo
+	jid: romeo@localhost
+	password: password
+
+[Client] Juliet
+	jid: juliet@localhost
+	password: password
+
+---------
+
+Romeo connects
+
+Balthasar connects
+
+Balthasar sends:
+	<presence/>
+
+Balthasar receives:
+	<presence/>
+
+Balthasar sends:
+	<iq type='set' to='pubsub.localhost' id='create2'>
+		<pubsub xmlns='http://jabber.org/protocol/pubsub'>
+			<create node='secret_musings'/>
+			<configure>
+				<x xmlns="jabber:x:data" type="submit">
+					<field var="FORM_TYPE" type="hidden">
+						<value>http://jabber.org/protocol/pubsub#node_config</value>
+					</field>
+					<field var="pubsub#access_model">
+						<value>authorize</value>
+					</field>
+				</x>
+			</configure>
+		</pubsub>
+	</iq>
+
+Balthasar receives:
+	<iq type="result" id='create2'/>
+
+Juliet connects
+
+Juliet sends:
+	<iq type="set" to="pubsub.localhost" id='sub1'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<subscribe node="secret_musings" jid="${Romeo's full JID}"/>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="error" id='sub1'/>
+
+Juliet sends:
+	<iq type="set" to="pubsub.localhost" id='sub2'>
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<subscribe node="secret_musings" jid="${Juliet's full JID}"/>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="result" id='sub2'>
+		<pubsub xmlns='http://jabber.org/protocol/pubsub'>
+			<subscription jid="${Juliet's full JID}" node='secret_musings' subscription='pending'/>
+		</pubsub>
+	</iq>
+
+Juliet sends:
+	<iq type="get" to="pubsub.localhost" id="sub3">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<subscriptions/>
+		</pubsub>
+	</iq>
+
+Juliet receives:
+	<iq type="result" from="pubsub.localhost" id="sub3">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub">
+			<subscriptions>
+				<subscription jid="${Juliet's full JID}" node='secret_musings' subscription='pending'/>
+			</subscriptions>
+		</pubsub>
+	</iq>
+
+Balthasar receives:
+	<message from="pubsub.localhost">
+		<x xmlns="jabber:x:data" type="form">
+			<field var="FORM_TYPE" type="hidden">
+				<value>http://jabber.org/protocol/pubsub#subscribe_authorization</value>
+			</field>
+			<field var="pubsub#node" type="text-single" label='Node name'>
+				<value>secret_musings</value>
+			</field>
+			<field var="pubsub#subscriber_jid" type="jid-single" label='Subscriber JID'>
+				<value>${Juliet's full JID}</value>
+			</field>
+			<field var="pubsub#allow" type="boolean" label='Allow subscription'>
+				<value>0</value>
+			</field>
+		</x>
+	</message>
+
+Balthasar sends:
+	<iq type="get" to="pubsub.localhost" id="subman0">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
+			<subscriptions node="secret_musings"/>
+		</pubsub>
+	</iq>
+
+Balthasar receives:
+	<iq from="pubsub.localhost" id="subman0" type="result">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
+			<subscriptions>
+				<subscription node='secret_musings' subscription="pending" jid="${Juliet's full JID}"/>
+			</subscriptions>
+		</pubsub>
+	</iq>
+
+Balthasar sends:
+	<message to="pubsub.localhost">
+		<x xmlns="jabber:x:data" type="submit">
+			<field var="FORM_TYPE" type="hidden">
+				<value>http://jabber.org/protocol/pubsub#subscribe_authorization</value>
+			</field>
+			<field var="pubsub#node" type="text-single">
+				<value>secret_musings</value>
+			</field>
+			<field var="pubsub#subscriber_jid" type="jid-single">
+				<value>${Juliet's full JID}</value>
+			</field>
+			<field var="pubsub#allow" type="boolean">
+				<value>true</value>
+			</field>
+		</x>
+	</message>
+
+
+Balthasar sends:
+	<iq type="get" to="pubsub.localhost" id="subman1">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
+			<subscriptions node="secret_musings"/>
+		</pubsub>
+	</iq>
+
+Balthasar receives:
+	<iq from="pubsub.localhost" id="subman1" type="result">
+		<pubsub xmlns="http://jabber.org/protocol/pubsub#owner">
+			<subscriptions>
+				<subscription subscription="subscribed" node='secret_musings' jid="${Juliet's full JID}"/>
+			</subscriptions>
+		</pubsub>
+	</iq>
+
+// vim: syntax=xml:

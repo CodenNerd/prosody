@@ -34,8 +34,39 @@ local default_config = {
 			be_subscribed = false;
 			be_unsubscribed = true;
 
+			request_subscribe = false;
+			request_subscribe_other = false;
+
 			set_affiliation = false;
 		};
+		-- 'unauthorized' is the default for unaffiliated in access_model 'authorize'
+		unauthorized = {
+			create = false;
+			publish = false;
+			retract = false;
+			get_nodes = true;
+
+			subscribe = false;
+			unsubscribe = true;
+			get_subscription = true;
+			get_subscriptions = true;
+			get_items = false;
+			get_metadata = true;
+
+			subscribe_other = false;
+			unsubscribe_other = false;
+			get_subscription_other = false;
+			get_subscriptions_other = false;
+
+			be_subscribed = true;
+			be_unsubscribed = true;
+
+			request_subscribe = true;
+			request_subscribe_other = false;
+
+			set_affiliation = false;
+		};
+		-- default for unaffiliated in open access_model
 		none = {
 			create = false;
 			publish = false;
@@ -56,6 +87,9 @@ local default_config = {
 
 			be_subscribed = true;
 			be_unsubscribed = true;
+
+			request_subscribe = true;
+			request_subscribe_other = false;
 
 			set_affiliation = false;
 		};
@@ -79,6 +113,9 @@ local default_config = {
 
 			be_subscribed = true;
 			be_unsubscribed = true;
+
+			request_subscribe = true;
+			request_subscribe_other = false;
 
 			set_affiliation = false;
 		};
@@ -104,6 +141,9 @@ local default_config = {
 			be_subscribed = true;
 			be_unsubscribed = true;
 
+			request_subscribe = true;
+			request_subscribe_other = false;
+
 			set_affiliation = false;
 		};
 		owner = {
@@ -128,8 +168,13 @@ local default_config = {
 			get_subscription_other = true;
 			get_subscriptions_other = true;
 
+			get_pending_subscriptions = true;
+
 			be_subscribed = true;
 			be_unsubscribed = true;
+
+			request_subscribe = true;
+			request_subscribe_other = true;
 
 			set_affiliation = true;
 		};
@@ -151,6 +196,7 @@ local default_node_config_mt = { __index = default_node_config };
 local function load_node_from_store(service, node_name)
 	local node = service.config.nodestore:get(node_name);
 	node.config = setmetatable(node.config or {}, {__index=service.node_defaults});
+	node.pending_subscribers = node.pending_subscribers or {};
 	return node;
 end
 
@@ -159,6 +205,7 @@ local function save_node_to_store(service, node)
 		name = node.name;
 		config = node.config;
 		subscribers = node.subscribers;
+		pending_subscribers = node.pending_subscribers;
 		affiliations = node.affiliations;
 	});
 end
@@ -263,6 +310,8 @@ function service:get_default_affiliation(node, actor) --> affiliation
 		return "member";
 	elseif access_model == "whitelist" then
 		return "outcast";
+	elseif access_model == "authorize" then
+		return "unauthorized";
 	end
 
 	if self.config.access_models then
@@ -314,6 +363,66 @@ function service:set_affiliation(node, actor, jid, affiliation) --> ok, err
 	return true;
 end
 
+function service:request_subscription(node, actor, jid, options) --> ok, err
+	-- Access checking
+	local cap;
+	if actor == true or jid == actor or self:jids_equal(actor, jid) then
+		cap = "request_subscribe";
+	else
+		cap = "request_subscribe_other";
+	end
+	if not self:may(node, actor, cap) then
+		return false, "forbidden";
+	end
+	if not self:may(node, jid, "be_subscribed") then
+		return false, "forbidden";
+	end
+	--
+	local node_obj = self.nodes[node];
+	if not node_obj then
+		if not self.config.autocreate_on_subscribe then
+			return false, "item-not-found";
+		else
+			local ok, err = self:create(node, true);
+			if not ok then
+				return ok, err;
+			end
+			node_obj = self.nodes[node];
+		end
+	end
+	local old_subscription = node_obj.subscribers[jid];
+	if old_subscription then
+		return false, "already-subscribed";
+	end
+	node_obj.pending_subscribers[jid] = options or true;
+
+	local normal_jid = self.config.normalize_jid(jid);
+	local subs = self.subscriptions[normal_jid];
+	if subs then
+		if not subs[jid] then
+			subs[jid] = { [node] = false };
+		else
+			subs[jid][node] = false;
+		end
+	else
+		self.subscriptions[normal_jid] = { [jid] = { [node] = false } };
+	end
+
+	if self.config.nodestore then
+		-- TODO pass the error from storage to caller eg wrapped in an util.error
+		local ok, err = save_node_to_store(self, node_obj); -- luacheck: ignore 211/err
+		if not ok then
+			-- Store failed, so clear in-memory structures
+			node_obj.pending_subscribers[jid] = nil;
+			self.subscriptions[normal_jid][jid][node] = nil;
+			return ok, "internal-server-error";
+		end
+	end
+
+	self.events.fire_event("subscription-requested", { service = self, node = node, jid = jid, normalized_jid = normal_jid, options = options });
+	return true;
+end
+
 function service:add_subscription(node, actor, jid, options) --> ok, err
 	-- Access checking
 	local cap;
@@ -342,7 +451,18 @@ function service:add_subscription(node, actor, jid, options) --> ok, err
 		end
 	end
 	local old_subscription = node_obj.subscribers[jid];
+	local pending_subscription = node_obj.pending_subscribers[jid];
+
+	if not options and pending_subscription then
+		-- Use the pending subscription request's options now we
+		-- are upgrading to a real subscription.
+		options = pending_subscription;
+	end
 	node_obj.subscribers[jid] = options or true;
+
+	-- Clear pending subscription request, if any
+	node_obj.pending_subscribers[jid] = nil;
+
 	local normal_jid = self.config.normalize_jid(jid);
 	local subs = self.subscriptions[normal_jid];
 	if subs then
@@ -359,8 +479,10 @@ function service:add_subscription(node, actor, jid, options) --> ok, err
 		-- TODO pass the error from storage to caller eg wrapped in an util.error
 		local ok, err = save_node_to_store(self, node_obj); -- luacheck: ignore 211/err
 		if not ok then
+			-- Store failed, revert in-memory to old subscription
 			node_obj.subscribers[jid] = old_subscription;
 			self.subscriptions[normal_jid][jid][node] = old_subscription and true or nil;
+			self.pending_subscribers[normal_jid] = pending_subscription;
 			return ok, "internal-server-error";
 		end
 	end
@@ -388,11 +510,17 @@ function service:remove_subscription(node, actor, jid) --> ok, err
 	if not node_obj then
 		return false, "item-not-found";
 	end
-	if not node_obj.subscribers[jid] then
+
+	local old_subscription = node_obj.subscribers[jid];
+	local pending_subscription = node_obj.pending_subscribers[jid];
+
+	if not old_subscription and not pending_subscription then
 		return false, "not-subscribed";
 	end
-	local old_subscription = node_obj.subscribers[jid];
+
 	node_obj.subscribers[jid] = nil;
+	node_obj.pending_subscribers[jid] = nil;
+
 	local normal_jid = self.config.normalize_jid(jid);
 	local subs = self.subscriptions[normal_jid];
 	if subs then
@@ -412,8 +540,14 @@ function service:remove_subscription(node, actor, jid) --> ok, err
 		-- TODO pass the error from storage to caller eg wrapped in an util.error
 		local ok, err = save_node_to_store(self, node_obj); -- luacheck: ignore 211/err
 		if not ok then
+			-- Restore previous in-memory state
 			node_obj.subscribers[jid] = old_subscription;
-			self.subscriptions[normal_jid][jid][node] = old_subscription and true or nil;
+			node_obj.pending_subscribers[jid] = pending_subscription;
+			if pending_subscription then
+				self.subscriptions[normal_jid][jid][node] = false;
+			elseif old_subscription then
+				self.subscriptions[normal_jid][jid][node] = true;
+			end
 			return ok, "internal-server-error";
 		end
 	end
@@ -441,6 +575,21 @@ function service:get_subscription(node, actor, jid) --> (true, subscription) or 
 	return true, node_obj.subscribers[jid];
 end
 
+function service:get_pending_subscriptions(node, actor)
+	-- Access checking
+	if not self:may(node, actor, "get_pending_subscriptions") then
+		return false, "forbidden";
+	end
+	--
+
+	local node_obj = self.nodes[node];
+	if not node_obj then
+		return false, "item-not-found";
+	end
+
+	return true, node_obj.pending_subscribers;
+end
+
 function service:create(node, actor, options) --> ok, err
 	-- Access checking
 	if not self:may(node, actor, "create") then
@@ -463,6 +612,7 @@ function service:create(node, actor, options) --> ok, err
 	self.nodes[node] = {
 		name = node;
 		subscribers = {};
+		pending_subscribers = {};
 		config = config;
 		affiliations = {};
 	};
@@ -739,10 +889,11 @@ function service:get_nodes(actor) --> (true, map) or (false, err)
 	return true, self.nodes;
 end
 
-local function flatten_subscriptions(ret, serv, subs, node, node_obj)
+local function flatten_subscriptions(ret, serv, subs, node, node_obj, inc_pending)
 	for subscribed_jid, subscribed_nodes in pairs(subs) do
 		if node then -- Return only subscriptions to this node
-			if subscribed_nodes[node] then
+			local state = subscribed_nodes[node];
+			if state or (state == false and inc_pending) then
 				ret[#ret+1] = {
 					node = node;
 					jid = subscribed_jid;
@@ -751,18 +902,20 @@ local function flatten_subscriptions(ret, serv, subs, node, node_obj)
 			end
 		else -- Return subscriptions to all nodes
 			local nodes = serv.nodes;
-			for subscribed_node in pairs(subscribed_nodes) do
-				ret[#ret+1] = {
-					node = subscribed_node;
-					jid = subscribed_jid;
-					subscription = nodes[subscribed_node].subscribers[subscribed_jid];
-				};
+			for subscribed_node, state in pairs(subscribed_nodes) do
+				if state or inc_pending then
+					ret[#ret+1] = {
+						node = subscribed_node;
+						jid = subscribed_jid;
+						subscription = nodes[subscribed_node].subscribers[subscribed_jid];
+					};
+				end
 			end
 		end
 	end
 end
 
-function service:get_subscriptions(node, actor, jid) --> (true, array) or (false, err)
+function service:get_subscriptions(node, actor, jid, include_pending) --> (true, array) or (false, err)
 	-- Access checking
 	local cap;
 	if actor == true or jid == actor or self:jids_equal(actor, jid) then
@@ -784,7 +937,7 @@ function service:get_subscriptions(node, actor, jid) --> (true, array) or (false
 	local ret = {};
 	if jid == nil then
 		for _, subs in pairs(self.subscriptions) do
-			flatten_subscriptions(ret, self, subs, node, node_obj)
+			flatten_subscriptions(ret, self, subs, node, node_obj, include_pending)
 		end
 		return true, ret;
 	end
@@ -793,7 +946,7 @@ function service:get_subscriptions(node, actor, jid) --> (true, array) or (false
 	-- We return the subscription object from the node to save
 	-- a get_subscription() call for each node.
 	if subs then
-		flatten_subscriptions(ret, self, subs, node, node_obj)
+		flatten_subscriptions(ret, self, subs, node, node_obj, include_pending)
 	end
 	return true, ret;
 end

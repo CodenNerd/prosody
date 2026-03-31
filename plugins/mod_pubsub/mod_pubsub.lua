@@ -30,6 +30,10 @@ function handle_pubsub_iq(event)
 	return lib_pubsub.handle_pubsub_iq(event, service);
 end
 
+function handle_pubsub_message(event)
+	return lib_pubsub.handle_pubsub_message(event, service);
+end
+
 -- An itemstore supports the following methods:
 --   items(): iterator over (id, item)
 --   get(id): return item with id
@@ -42,6 +46,10 @@ end
 --   set(node_name, node_data)
 --   get(node_name)
 --   users(): iterator over (node_name)
+
+local supported_access_models = require "prosody.util.set".new({
+	"open", "whitelist", "authorize"
+});
 
 local max_max_items = module:get_option_integer("pubsub_max_items", 256, 1);
 
@@ -130,8 +138,7 @@ function check_node_config(node, actor, new_config) -- luacheck: ignore 212/node
 	if (tonumber_max_items(new_config["max_items"]) or 1) > max_max_items then
 		return false;
 	end
-	if new_config["access_model"] ~= "whitelist"
-	and new_config["access_model"] ~= "open" then
+	if not supported_access_models:contains(new_config["access_model"]) then
 		return false;
 	end
 	return true;
@@ -172,6 +179,8 @@ end
 
 module:hook("iq/host/"..xmlns_pubsub..":pubsub", handle_pubsub_iq);
 module:hook("iq/host/"..xmlns_pubsub_owner..":pubsub", handle_pubsub_iq);
+
+module:hook("message/host", handle_pubsub_message);
 
 local function add_disco_features_from_service(service) --luacheck: ignore 431/service
 	for feature in lib_pubsub.get_feature_set(service) do
@@ -243,6 +252,7 @@ function set_service(new_service)
 
 	module.environment.service = service;
 	add_disco_features_from_service(service);
+	lib_pubsub.add_service_hooks(service);
 end
 
 function module.save()

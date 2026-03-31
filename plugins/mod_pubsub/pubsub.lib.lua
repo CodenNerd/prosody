@@ -5,6 +5,7 @@ local set = require "prosody.util.set";
 local st = require "prosody.util.stanza";
 local it = require "prosody.util.iterators";
 local uuid_generate = require "prosody.util.uuid".generate;
+local get_form_type = require "prosody.util.dataforms".get_type;
 local dataform = require"prosody.util.dataforms".new;
 local errors = require "prosody.util.error";
 
@@ -16,6 +17,9 @@ local _M = {};
 
 local handlers = {};
 _M.handlers = handlers;
+
+local form_handlers = {};
+_M.form_handlers = form_handlers;
 
 local pubsub_errors = errors.init("pubsub", xmlns_pubsub_errors, {
 	["conflict"] = { "cancel", "conflict" };
@@ -32,6 +36,7 @@ local pubsub_errors = errors.init("pubsub", xmlns_pubsub_errors, {
 	["precondition-not-met"] = { "cancel", "conflict", nil, "precondition-not-met" };
 	["invalid-item"] = { "modify", "bad-request", "invalid item" };
 	["persistent-items-unsupported"] = { "cancel", "feature-not-implemented", nil, "persistent-items" };
+	["already-subscribed"] = { "cancel", "bad-request" };
 });
 local function pubsub_error_reply(stanza, error, context)
 	local err = pubsub_errors.wrap(error, context);
@@ -228,6 +233,32 @@ local node_metadata_form = dataform {
 };
 _M.node_metadata_form = node_metadata_form;
 
+local sub_approval_form = dataform {
+	{
+		type = "hidden";
+		var = "FORM_TYPE";
+		value = "http://jabber.org/protocol/pubsub#subscribe_authorization";
+	};
+	{
+		type = "text-single";
+		name = "node";
+		var = "pubsub#node";
+		label = "Node name";
+	};
+	{
+		type = "jid-single";
+		name = "jid";
+		var = "pubsub#subscriber_jid";
+		label = "Subscriber JID";
+	};
+	{
+		type = "boolean";
+		name = "allow";
+		var = "pubsub#allow";
+		label = "Allow subscription";
+	};
+};
+
 local service_method_feature_map = {
 	add_subscription = { "subscribe", "subscription-options" };
 	create = { "create-nodes", "instant-nodes", "item-ids", "create-and-configure" };
@@ -269,7 +300,7 @@ function _M.get_feature_set(service)
 	end
 
 	for affiliation in pairs(service.config.capabilities) do
-		if affiliation ~= "none" and affiliation ~= "owner" then
+		if affiliation ~= "none" and affiliation ~= "unauthorized" and affiliation ~= "owner" then
 			supported_features:add(affiliation.."-affiliation");
 		end
 	end
@@ -337,6 +368,29 @@ function _M.handle_pubsub_iq(event, service)
 	end
 end
 
+function _M.handle_pubsub_message(event, service)
+	local origin, stanza = event.origin, event.stanza;
+
+	if stanza.attr.type == "error" then
+		return;
+	end
+
+	local form = stanza:get_child("x", "jabber:x:data");
+	if form and form.attr.type == "submit" then
+		local form_type = get_form_type(form);
+		if not form_type then return; end
+
+		local form_name = form_type:match("http://jabber.org/protocol/pubsub#([%w_]+)$");
+		if not form_name then return; end
+
+		local handler = form_handlers[form_name];
+		if not handler then return; end
+
+		handler(origin, stanza, form, service);
+		return true;
+	end
+end
+
 function handlers.get_items(origin, stanza, items, service)
 	local node = items.attr.node;
 
@@ -398,7 +452,7 @@ end
 
 function handlers.get_subscriptions(origin, stanza, subscriptions, service)
 	local node = subscriptions.attr.node;
-	local ok, ret = service:get_subscriptions(node, stanza.attr.from, stanza.attr.from);
+	local ok, ret = service:get_subscriptions(node, stanza.attr.from, stanza.attr.from, true);
 	if not ok then
 		origin.send(pubsub_error_reply(stanza, ret));
 		return true;
@@ -407,7 +461,7 @@ function handlers.get_subscriptions(origin, stanza, subscriptions, service)
 		:tag("pubsub", { xmlns = xmlns_pubsub })
 			:tag("subscriptions");
 	for _, sub in ipairs(ret) do
-		reply:tag("subscription", { node = sub.node, jid = sub.jid, subscription = 'subscribed' }):up();
+		reply:tag("subscription", { node = sub.node, jid = sub.jid, subscription = sub.subscription and 'subscribed' or 'pending' }):up();
 	end
 	origin.send(reply);
 	return true;
@@ -415,17 +469,19 @@ end
 
 function handlers.owner_get_subscriptions(origin, stanza, subscriptions, service)
 	local node = subscriptions.attr.node;
-	local ok, ret = service:get_subscriptions(node, stanza.attr.from);
+	local ok, ret = service:get_subscriptions(node, stanza.attr.from, nil, true);
 	if not ok then
 		origin.send(pubsub_error_reply(stanza, ret));
 		return true;
 	end
+
 	local reply = st.reply(stanza)
 		:tag("pubsub", { xmlns = xmlns_pubsub_owner })
 			:tag("subscriptions");
 	for _, sub in ipairs(ret) do
-		reply:tag("subscription", { node = sub.node, jid = sub.jid, subscription = 'subscribed' }):up();
+		reply:tag("subscription", { node = sub.node, jid = sub.jid, subscription = sub.subscription and 'subscribed' or 'pending' }):up();
 	end
+
 	origin.send(reply);
 	return true;
 end
@@ -545,7 +601,22 @@ function handlers.set_subscribe(origin, stanza, subscribe, service)
 			return true
 		end
 	end
-	local ok, ret = service:add_subscription(node, stanza.attr.from, jid, options);
+
+	-- Test whether we can subscribe or need to request a subscription
+	-- Known issue: this test fails if we are subscribing someone else,
+	-- but it would be an unusual case to have permission to do that but
+	-- not subscribe ourselves.
+	local ok, ret, success_state;
+	if service:may(node, stanza.attr.from, "subscribe") then
+		module:log("debug", "Subscribing to %s", node);
+		success_state = "subscribed";
+		ok, ret = service:add_subscription(node, stanza.attr.from, jid, options);
+	else
+		module:log("debug", "Requesting subscription to %s (%q %q)", node, stanza.attr.from, jid);
+		success_state = "pending";
+		ok, ret = service:request_subscription(node, stanza.attr.from, jid, options);
+	end
+
 	local reply;
 	if ok then
 		reply = st.reply(stanza)
@@ -553,7 +624,7 @@ function handlers.set_subscribe(origin, stanza, subscribe, service)
 				:tag("subscription", {
 					node = node,
 					jid = jid,
-					subscription = "subscribed"
+					subscription = success_state;
 				}):up();
 		if options_tag then
 			reply:add_child(options_tag);
@@ -871,7 +942,9 @@ function handlers.owner_set_affiliations(origin, stanza, affiliations, service)
 		local affiliation = affiliation_tag.attr.affiliation;
 
 		jid = jid_prep(jid);
-		if affiliation == "none" then affiliation = nil; end
+		if affiliation == "none" or affiliation == "unauthorized" then
+			affiliation = nil;
+		end
 
 		local ok, err = service:set_affiliation(node, stanza.attr.from, jid, affiliation);
 		if not ok then
@@ -972,5 +1045,74 @@ local function archive_itemstore(archive, max_items, user, node)
 	return get_set;
 end
 _M.archive_itemstore = archive_itemstore;
+
+local function notify_subscription_request(event)
+	local service, node = event.service, event.node;
+
+	local node_obj = service.nodes[node];
+	if not node_obj then
+		return;
+	end
+
+	local notify_jids = {};
+
+	for jid, affiliation in pairs(node_obj.affiliations) do
+		if affiliation == "owner" then
+			table.insert(notify_jids, jid);
+		end
+	end
+
+	if #notify_jids == 0 then
+		return;
+	end
+
+	local notification = st.message({ from = module.host })
+		:add_child(sub_approval_form:form({
+			node = node;
+			jid = event.jid;
+			allow = false;
+		}));
+
+	module:log("debug", "Sending subscription request notification to %d JIDs", #notify_jids);
+
+	if #notify_jids == 1 then
+		notification.attr.to = notify_jids[1];
+		module:send(notification);
+		return;
+	end
+
+	for _, recipient in ipairs(notify_jids) do
+		local clone = st.clone(notification);
+		clone.attr.to = recipient;
+		module:send(clone);
+	end
+end
+
+function _M.form_handlers.subscribe_authorization(origin, stanza, form, service)
+	local form_data, errs = sub_approval_form:data(form);
+	if not form_data then
+		local reply = st.error_reply(stanza, "modify", "not-acceptable", dataform_error_message(errs));
+		origin.send(reply);
+		return;
+	end
+
+	local node, jid, allow = form_data.node, form_data.jid, form_data.allow;
+
+	local ok, ret;
+	if allow then
+		ok, ret = service:add_subscription(node, stanza.attr.from, jid);
+	else
+		ok, ret = service:remove_subscription(node, stanza.attr.from, jid);
+	end
+
+	if not ok then
+		origin.send(pubsub_error_reply(stanza, ret));
+		return;
+	end
+end
+
+function _M.add_service_hooks(service)
+	module:hook_object_event(service.events, "subscription-requested", notify_subscription_request);
+end
 
 return _M;
