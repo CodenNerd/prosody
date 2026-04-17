@@ -45,7 +45,7 @@ local bosh_max_wait = module:get_option_period("bosh_max_wait", 120);
 
 local consider_bosh_secure = module:get_option_boolean("consider_bosh_secure");
 local cross_domain = module:get_option("cross_domain_bosh");
-local stanza_size_limit = module:get_option_integer("c2s_stanza_size_limit", 1024*256, 10000);
+local unauthed_stanza_size_limit = module:get_option_integer("c2s_stanza_size_limit", 10000, 1000);
 
 if cross_domain ~= nil then
 	module:log("info", "The 'cross_domain_bosh' option has been deprecated");
@@ -124,8 +124,9 @@ function handle_POST(event)
 	local body = request.body;
 
 	local context = { request = request, response = response, notopen = true };
-	local stream = new_xmpp_stream(context, stream_callbacks, stanza_size_limit);
+	local stream = new_xmpp_stream(context, stream_callbacks, unauthed_stanza_size_limit);
 	response.context = context;
+	context.stream = stream;
 
 	local headers = response.headers;
 	headers.content_type = "text/xml; charset=utf-8";
@@ -336,6 +337,7 @@ function stream_callbacks.streamopened(context, attr)
 		session.bosh_responses = cache.new(BOSH_HOLD + 1):table();
 		session.requests = {};
 		session.send_buffer = {};
+		session.stanza_size_limit = unauthed_stanza_size_limit;
 		session.reset_stream = bosh_reset_stream;
 		session.close = bosh_close_stream;
 		session.dispatch_stanza = core_process_stanza;
@@ -411,6 +413,11 @@ function stream_callbacks.streamopened(context, attr)
 	end
 
 	session.conn = request.conn;
+	session.stream = context.stream;
+
+	if session.stanza_size_limit then
+		session.stream:set_stanza_size_limit(session.stanza_size_limit);
+	end
 
 	if session.rid then
 		local diff = rid - session.rid;
@@ -548,6 +555,7 @@ local function GET_response(event)
 end
 
 function module.add_host(module)
+	module:depends("c2s"); -- updates stanza_size_limit on authentication
 	module:depends("http");
 	module:provides("http", {
 		default_path = "/http-bind";
