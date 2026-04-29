@@ -60,8 +60,6 @@ function listener.onincoming(conn, data)
 				transfers[sha].initiator = conn;
 				session.sha = sha;
 				module:log("debug", "SOCKS5 initiator connected for session %s", sha);
-				server.link(conn, transfers[sha].target, max_buffer_size);
-				server.link(transfers[sha].target, conn, max_buffer_size);
 			end
 		else -- error, unexpected input
 			conn:write("\5\1\0\3\0\0\0"); -- VER, REP, RSV, ATYP, BND.ADDR (sha), BND.PORT (2 Byte)
@@ -105,25 +103,24 @@ function module.add_host(module)
 	module:add_identity("proxy", "bytestreams", name);
 	module:add_feature("http://jabber.org/protocol/bytestreams");
 
-	module:hook("iq-get/host/http://jabber.org/protocol/bytestreams:query", function(event)
-		local origin, stanza = event.origin, event.stanza;
-
-		-- check ACL
-		-- using 'while' instead of 'if' so we can break out of it
-		local allow;
+	local function is_permitted(origin, stanza)
 		if proxy_acl and #proxy_acl > 0 then
 			local jid = stanza.attr.from;
 			for _, acl in ipairs(proxy_acl) do
 				if jid_compare(jid, acl) then
-					allow = true;
-					break;
+					return true;
 				end
 			end
 		elseif proxy_open_access or origin.type == "c2s" then
-			allow = true;
+			return true;
 		end
+		return false;
+	end
 
-		if not allow then
+	module:hook("iq-get/host/http://jabber.org/protocol/bytestreams:query", function(event)
+		local origin, stanza = event.origin, event.stanza;
+
+		if not is_permitted(origin, stanza) then
 			module:log("warn", "Denying use of proxy for %s", stanza.attr.from);
 			origin.send(st.error_reply(stanza, "auth", "forbidden"));
 			return true;
@@ -144,6 +141,12 @@ function module.add_host(module)
 
 	module:hook("iq-set/host/http://jabber.org/protocol/bytestreams:query", function(event)
 		local origin, stanza = event.origin, event.stanza;
+
+		if not is_permitted(origin, stanza) then
+			module:log("warn", "Denying use of proxy for %s", stanza.attr.from);
+			origin.send(st.error_reply(stanza, "auth", "forbidden"));
+			return true;
+		end
 
 		local query = stanza.tags[1];
 		local sid = query.attr.sid;
@@ -166,6 +169,8 @@ function module.add_host(module)
 			else -- if transfers[sha].initiator ~= nil and transfers[sha].target ~= nil then
 				module:log("debug", "Transfer activated (%s)", info);
 				transfers[sha].activated = true;
+				server.link(transfers[sha].initiator, transfers[sha].target, max_buffer_size);
+				server.link(transfers[sha].target, transfers[sha].initiator, max_buffer_size);
 				transfers[sha].target:resume();
 				transfers[sha].initiator:resume();
 				origin.send(st.reply(stanza));
