@@ -82,7 +82,7 @@ static int find(ringbuffer *b, const char *s, size_t l) {
 	size_t i, j;
 	int m;
 
-	if(b->rpos == b->wpos) { /* empty */
+	if(l > b->blen || l == 0) { /* needle is too large or too small */
 		return 0;
 	}
 
@@ -99,7 +99,7 @@ static int find(ringbuffer *b, const char *s, size_t l) {
 				}
 
 			if(m) {
-				return i + l;
+				return i + 1;
 			}
 		}
 	}

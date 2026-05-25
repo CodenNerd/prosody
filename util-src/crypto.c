@@ -133,7 +133,7 @@ static int base_evp_sign(lua_State *L, const int key_type, const EVP_MD *digest_
 	luaL_Buffer sigbuf;
 
 	size_t msg_len;
-	const unsigned char* msg = (unsigned char*)lua_tolstring(L, 2, &msg_len);
+	const unsigned char* msg = (unsigned char*)luaL_checklstring(L, 2, &msg_len);
 
 	size_t sig_len;
 	unsigned char *sig = NULL;
@@ -151,16 +151,13 @@ static int base_evp_sign(lua_State *L, const int key_type, const EVP_MD *digest_
 		return 1;
 	}
 
-	// COMPAT w/ Lua 5.1
-	luaL_buffinit(L, &sigbuf);
-	sig = memset(luaL_prepbuffer(&sigbuf), 0, sig_len);
+	sig = (unsigned char *)luaL_buffinitsize(L, &sigbuf, sig_len);
 
 	if(EVP_DigestSign(md_ctx, sig, &sig_len, msg, msg_len) != 1) {
 		lua_pushnil(L);
 	}
 	else {
-		luaL_addsize(&sigbuf, sig_len);
-		luaL_pushresult(&sigbuf);
+		luaL_pushresultsize(&sigbuf, sig_len);
 		return 1;
 	}
 

@@ -355,7 +355,7 @@ function service:set_affiliation(node, actor, jid, affiliation) --> ok, err
 			return ok, err;
 		end
 	elseif jid_sub and not self:may(node, jid, "be_subscribed") then
-		local ok, err = self:add_subscription(node, true, jid);
+		local ok, err = self:remove_subscription(node, true, jid);
 		if not ok then
 			return ok, err;
 		end
@@ -662,7 +662,7 @@ function service:delete(node, actor) --> ok, err
 	if self.config.nodestore then
 		local ok, err = delete_node_in_store(self, node);
 		if not ok then
-			self.nodes[node] = nil;
+			self.nodes[node] = node_obj;
 			return ok, err;
 		end
 	end
