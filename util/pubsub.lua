@@ -482,7 +482,7 @@ function service:add_subscription(node, actor, jid, options) --> ok, err
 			-- Store failed, revert in-memory to old subscription
 			node_obj.subscribers[jid] = old_subscription;
 			self.subscriptions[normal_jid][jid][node] = old_subscription and true or nil;
-			self.pending_subscribers[normal_jid] = pending_subscription;
+			node_obj.pending_subscribers[normal_jid] = pending_subscription;
 			return ok, "internal-server-error";
 		end
 	end
