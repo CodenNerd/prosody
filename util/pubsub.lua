@@ -543,6 +543,12 @@ function service:remove_subscription(node, actor, jid) --> ok, err
 			-- Restore previous in-memory state
 			node_obj.subscribers[jid] = old_subscription;
 			node_obj.pending_subscribers[jid] = pending_subscription;
+			if not self.subscriptions[normal_jid] then
+				self.subscriptions[normal_jid] = {};
+			end
+			if not self.subscriptions[normal_jid][jid] then
+				self.subscriptions[normal_jid][jid] = {};
+			end
 			if pending_subscription then
 				self.subscriptions[normal_jid][jid][node] = false;
 			elseif old_subscription then
