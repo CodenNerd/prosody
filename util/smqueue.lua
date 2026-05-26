@@ -31,10 +31,8 @@ function smqueue:ack(h)
 		table.insert(acked, v);
 	end
 
-	local c = self._next_checkpoint;
-	if c and h >= c then
-		self:_call_checkpoints(h);
-	end
+	self:_call_checkpoints(h);
+
 	return acked
 end
 
@@ -68,22 +66,17 @@ end
 
 function smqueue:add_checkpoint(cb, ud)
 	table.insert(self._checkpoints, { self._head; cb; ud });
-	if not self._next_checkpoint then
-		self._next_checkpoint = self._head;
-	end
 end
 
 function smqueue:_call_checkpoints(h)
 	local checkpoints = self._checkpoints;
+	local c = checkpoints[1];
 
-	local c = table.remove(checkpoints, 1);
-	self._next_checkpoint = checkpoints[1] and checkpoints[1][1] or nil;
-
-	local cb, ud = c[2], c[3];
-	cb(ud);
-
-	if h >= self._next_checkpoint then
-		return self:_call_checkpoints(h)
+	while c and h >= c[1] do
+		table.remove(checkpoints, 1);
+		local cb, ud = c[2], c[3];
+		cb(ud);
+		c = checkpoints[1];
 	end
 end
 

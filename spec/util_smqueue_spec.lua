@@ -81,4 +81,85 @@ describe("util.smqueue", function()
 			end
 		end)
 	end)
+
+	describe("#add_checkpoint", function()
+		it("fires the callback when ack reaches the checkpoint", function()
+			local q = smqueue.new(10);
+			for i = 1, 4 do q:push(i); end
+			local called = false;
+			q:add_checkpoint(function() called = true; end);
+			assert.falsy(called, "should not fire before ack");
+			q:ack(4);
+			assert.truthy(called, "should fire when ack reaches checkpoint");
+		end)
+
+		it("fires when ack exceeds the checkpoint", function()
+			local q = smqueue.new(10);
+			for i = 1, 4 do q:push(i); end
+			local called = false;
+			q:add_checkpoint(function() called = true; end);
+			for i = 5, 8 do q:push(i); end
+			q:ack(7); -- acks past the checkpoint at 4
+			assert.truthy(called);
+		end)
+
+		it("does not fire for acks below the checkpoint threshold", function()
+			local q = smqueue.new(10);
+			for i = 1, 5 do q:push(i); end
+			local called = false;
+			q:add_checkpoint(function() called = true; end);
+			q:ack(4);
+			assert.falsy(called, "should not fire when ack is below checkpoint");
+		end)
+
+		it("fires the callback with optional data argument", function()
+			local q = smqueue.new(10);
+			for i = 1, 4 do q:push(i); end
+			local received_data;
+			q:add_checkpoint(function(d) received_data = d; end, "hello");
+			q:ack(4);
+			assert.equal("hello", received_data);
+		end)
+
+		it("fires multiple checkpoints in a single ack call", function()
+			local q = smqueue.new(10);
+			for i = 1, 3 do q:push(i); end
+			local fired = {};
+			q:add_checkpoint(function() fired[#fired+1] = "first"; end);
+			q:push(4);
+			q:add_checkpoint(function() fired[#fired+1] = "second-1"; end);
+			q:add_checkpoint(function() fired[#fired+1] = "second-2"; end);
+			q:push(5);
+			q:add_checkpoint(function() fired[#fired+1] = "third"; end);
+			q:ack(5); -- should call all checkpoints, in order
+			assert.same({ "first", "second-1", "second-2", "third" }, fired);
+		end)
+
+		it("fires checkpoints in order across multiple acks", function()
+			local q = smqueue.new(10);
+			for i = 1, 3 do q:push(i); end
+			local order = {};
+			q:add_checkpoint(function() order[#order+1] = 1; end);
+			q:push(4);
+			q:add_checkpoint(function() order[#order+1] = 2; end);
+			q:push(5);
+			q:add_checkpoint(function() order[#order+1] = 3; end);
+			q:ack(3); -- fires only first
+			assert.same({ 1 }, order);
+			q:ack(5); -- fires second and third
+			assert.same({ 1, 2, 3 }, order);
+		end)
+
+		it("fires each checkpoint exactly once", function()
+			local q = smqueue.new(10);
+			for i = 1, 4 do q:push(i); end
+			local count = 0;
+			q:add_checkpoint(function() count = count + 1; end);
+			q:ack(4);
+			q:ack(4); -- duplicate ack
+			for i = 5, 8 do q:push(i); end
+			q:ack(8);
+			assert.equal(1, count);
+		end)
+	end)
 end);
