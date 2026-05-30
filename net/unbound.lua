@@ -19,6 +19,7 @@ local net_server = require "prosody.net.server";
 local libunbound = require"lunbound";
 local promise = require"prosody.util.promise";
 local new_id = require "prosody.util.id".short;
+local timer = require "prosody.util.timer";
 
 local dns_utils = require"prosody.util.dns";
 local classes, types, errors = dns_utils.classes, dns_utils.types, dns_utils.errors;
@@ -42,13 +43,6 @@ local function add_defaults(conf)
 end
 
 local unbound_config;
-if prosody then
-	local config = require"prosody.core.configmanager";
-	unbound_config = add_defaults(config.get("*", "unbound"));
-	prosody.events.add_handler("config-reloaded", function()
-		unbound_config = add_defaults(config.get("*", "unbound"));
-	end);
-end
 -- Note: libunbound will default to using root hints if resolvconf is unset
 
 local function connect_server(unbound, server)
@@ -64,9 +58,6 @@ local unbound, server_conn;
 local function initialize()
 	unbound = libunbound.new(unbound_config);
 	server_conn = connect_server(unbound, net_server);
-end
-if prosody then
-	prosody.events.add_handler("server-started", initialize);
 end
 
 local answer_mt = {
@@ -91,8 +82,6 @@ local answer_mt = {
 		return _string;
 	end;
 };
-
-local waiting_queries = {};
 
 local function prep_answer(a)
 	if not a then return end
@@ -128,11 +117,9 @@ local function lookup(callback, qname, qtype, qclass)
 	local ntype, nclass = types[qtype], classes[qclass];
 
 	local m;
-	local ret;
 	local log_query = logger.init("unbound.query"..new_id());
 	local function callback_wrapper(a, err)
 		m();
-		waiting_queries[ret] = nil;
 		if a then
 			count(qclass, qtype, #a);
 			prep_answer(a);
@@ -146,11 +133,8 @@ local function lookup(callback, qname, qtype, qclass)
 	end
 	log_query("debug", "Resolve %s %s %s", qname, qclass, qtype);
 	m = measure(qclass, qtype);
-	local err;
-	ret, err = unbound:resolve_async(callback_wrapper, qname, ntype, nclass);
-	if ret then
-		waiting_queries[ret] = callback;
-	else
+	local ret, err = unbound:resolve_async(callback_wrapper, qname, ntype, nclass);
+	if not ret then
 		log_query("error", "Resolver error: %s", err);
 	end
 	return ret, err;
@@ -166,22 +150,29 @@ local function lookup_sync(qname, qtype, qclass)
 	return prep_answer(a);
 end
 
-local function cancel(id)
-	local cb = waiting_queries[id];
-	unbound:cancel(id);
-	if cb then
-		cb(nil, "canceled");
-		waiting_queries[id] = nil;
+-- Reinitiate libunbound context, drops cache
+local function purge()
+	if server_conn then
+		local old_unbound, old_server_conn = unbound, server_conn;
+		timer.add_task(30, function()
+			old_server_conn:close();
+			if old_unbound.cancelall then
+				old_unbound:cancelall();
+			end
+		end)
 	end
+	initialize();
 	return true;
 end
 
--- Reinitiate libunbound context, drops cache
-local function purge()
-	for id in pairs(waiting_queries) do cancel(id); end
-	if server_conn then server_conn:close(); end
-	initialize();
-	return true;
+if prosody then
+	local config = require"prosody.core.configmanager";
+	unbound_config = add_defaults(config.get("*", "unbound"));
+	prosody.events.add_handler("config-reloaded", function()
+		unbound_config = add_defaults(config.get("*", "unbound"));
+		purge();
+	end);
+	prosody.events.add_handler("server-started", initialize);
 end
 
 local function not_implemented()
@@ -190,11 +181,11 @@ end
 -- Public API
 local _M = {
 	lookup = lookup;
-	cancel = cancel;
+	cancel = not_implemented;
 	new_async_socket = not_implemented;
 	dns = {
 		lookup = lookup_sync;
-		cancel = cancel;
+		cancel = not_implemented;
 		cache = noop;
 		socket_wrapper_set = noop;
 		settimeout = noop;
