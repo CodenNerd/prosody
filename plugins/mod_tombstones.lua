@@ -125,3 +125,50 @@ module:hook("presence/bare", function(event)
 		return true;
 	end
 end, 1);
+
+--- shell commands
+module:add_item("shell-command", {
+	section = "user";
+	name = "list_deleted";
+	desc = "List deleted user accounts (tombstones)";
+	args = {
+		{ name = "host", type = "string" };
+	};
+	host_selector = "host";
+	handler = function (self, host) --luacheck: ignore 212/host
+		local c = 0;
+		for username in pairs(graveyard:get(nil)) do
+			c = c + 1;
+			self.session.print(username);
+		end
+		return true, ("Showing %d deleted accounts"):format(c);
+	end;
+});
+
+module:add_item("shell-command", {
+	section = "user";
+	name = "forget";
+	desc = "Forget a deleted user account (tombstone)";
+	args = {
+		{ name = "jid", type = "string" };
+	};
+	host_selector = "jid";
+	handler = function (self, user_jid) --luacheck: ignore 212/self
+		local username = jid_node(user_jid);
+		if not has_tombstone(username) then
+			if require "core.usermanager".user_exists(username, module.host) then
+				return nil, "User account has not been deleted";
+			else
+				return nil, "User account does not exist";
+			end
+		end
+
+		local ok, err = clear_tombstone(username);
+		if not ok then
+			return nil, ("Failed to remove tombstone: %s"):format(err);
+		end
+
+		return true, "User account forgotten";
+	end;
+});
+
