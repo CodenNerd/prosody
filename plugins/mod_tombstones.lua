@@ -7,7 +7,7 @@ local st = require "prosody.util.stanza";
 
 -- Using a map store as key-value store so that removal of all user data
 -- does not also remove the tombstone, which would defeat the point
-local graveyard = module:open_store(nil, "map");
+local graveyard = module:open_store(nil, "keyval+");
 local graveyard_cache = require "prosody.util.cache".new(module:get_option_integer("tombstone_cache_size", 1024, 1));
 
 local ttl = module:get_option_period("user_tombstone_expiry", nil);
@@ -21,9 +21,26 @@ local ttl = module:get_option_period("user_tombstone_expiry", nil);
 -- TODO Attempt to deregister from MUCs based on bookmarks
 -- TODO Unsubscribe from pubsub services if a notification is received
 
+local function set_tombstone(username)
+	local time = os.time();
+	local ok, err = graveyard:set_key(nil, username, time);
+	if ok then
+		graveyard_cache:set(username, time);
+	end
+	return ok, err;
+end
+
+local function clear_tombstone(username)
+	local ok, err = graveyard:set_key(nil, username, nil);
+	if ok then
+		graveyard_cache:set(username, false);
+	end
+	return ok, err;
+end
+
 module:hook_global("user-deleted", function(event)
 	if event.host == module.host then
-		local ok, err = graveyard:set(nil, event.username, os.time());
+		local ok, err = set_tombstone(event.username);
 		if not ok then module:log("error", "Could store tombstone for %s: %s", event.username, err); end
 	end
 end);
@@ -40,7 +57,7 @@ function has_tombstone(username)
 	elseif cached_result then
 		tombstone = cached_result;
 	else
-		local stored_result, err = graveyard:get(nil, username);
+		local stored_result, err = graveyard:get_key(nil, username);
 		if not stored_result and not err then
 			-- Cache that there is no tombstone for this user
 			graveyard_cache:set(username, false);
@@ -56,7 +73,7 @@ function has_tombstone(username)
 	-- Check expiry
 	if ttl and tombstone + ttl < os.time() then
 		module:log("debug", "Tombstone for %s created at %s has expired", username, datetime.datetime(tombstone));
-		graveyard:set(nil, username, nil);
+		graveyard:set_key(nil, username, nil);
 		graveyard_cache:set(username, nil); -- clear cache entry (if any)
 		return nil;
 	end
