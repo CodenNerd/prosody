@@ -468,6 +468,7 @@ local function check(arg)
 			"trusted_proxies",
 			"umask",
 			"use_dane",
+			"use_dnssec",
 			"use_ipv4",
 			"use_ipv6",
 			"websocket_frame_buffer_limit",

@@ -27,6 +27,10 @@ TRUNK
 - mod_mam has a new `archive-query-result` event
 - stanza meta api
 
+## Changes
+
+- DNSSEC support in libunbound enabled by default, requiring root DNSSEC trust anchors
+
 13.0.0
 ======
 

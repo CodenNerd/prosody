@@ -32,11 +32,20 @@ local builtin_defaults = {
 	resolvconf = true;
 }
 
-local function add_defaults(conf)
+-- Path to file containing current DNSSEC trust anchors, needed to enable DNSSEC.
+-- Packagers: Adjust this path if it is different on your distribution
+local trustfile = "/usr/share/dns/root.ds";
+
+local function add_defaults(conf, use_dnssec)
 	conf = conf or {};
 	for option, default in pairs(builtin_defaults) do
 		if conf[option] == nil then
 			conf[option] = default;
+		end
+	end
+	if use_dnssec ~= false then
+		if conf["trustfile"] == nil and conf["trusted"] == nil then
+			conf["trustfile"] = trustfile;
 		end
 	end
 	for option, default in pairs(libunbound.config) do
@@ -170,10 +179,11 @@ local function purge()
 end
 
 if prosody then
-	local config = require"prosody.core.configmanager";
-	unbound_config = add_defaults(config.get("*", "unbound"));
+	-- TODO move this glue logic into util.startup?
+	local config = require "prosody.core.configmanager";
+	unbound_config = add_defaults(config.get("*", "unbound"), config.get("*", "use_dnssec"));
 	prosody.events.add_handler("config-reloaded", function()
-		unbound_config = add_defaults(config.get("*", "unbound"));
+		unbound_config = add_defaults(config.get("*", "unbound"), config.get("*", "use_dnssec"));
 		purge();
 	end);
 	prosody.events.add_handler("server-started", initialize);

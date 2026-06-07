@@ -213,7 +213,7 @@ local core_defaults = {
 		"!3DES",       -- 3DES - slow and of questionable security
 		"!aNULL",      -- Ciphers that does not authenticate the connection
 	};
-	dane = tls.features.capabilities.dane and configmanager.get("*", "use_dane") and { "no_ee_namechecks" };
+	dane = tls.features.capabilities.dane and configmanager.get("*", "use_dane") ~= false and { "no_ee_namechecks" };
 }
 
 -- https://datatracker.ietf.org/doc/html/rfc7919#appendix-A.1
@@ -384,7 +384,7 @@ local function reload_ssl_config()
 	if tls.features.options.no_compression then
 		core_defaults.options.no_compression = configmanager.get("*", "ssl_compression") ~= true;
 	end
-	if not configmanager.get("*", "use_dane") then
+	if configmanager.get("*", "use_dane") == false then
 		core_defaults.dane = false;
 	elseif tls.features.capabilities.dane then
 		core_defaults.dane = { "no_ee_namechecks" };
