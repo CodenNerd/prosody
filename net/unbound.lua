@@ -25,7 +25,12 @@ local dns_utils = require"prosody.util.dns";
 local classes, types, errors = dns_utils.classes, dns_utils.types, dns_utils.errors;
 local parsers = dns_utils.parsers;
 
-local builtin_defaults = { hoststxt = false }
+local builtin_defaults = {
+	-- Continue net.dns tradition of not reading /etc/hosts which does not fit well with SRV records anyway
+	hoststxt = false;
+	-- net.dns did read /etc/resolv.conf and we want libunbound to instead of operating in recursive mode
+	resolvconf = true;
+}
 
 local function add_defaults(conf)
 	conf = conf or {};
@@ -43,7 +48,6 @@ local function add_defaults(conf)
 end
 
 local unbound_config;
--- Note: libunbound will default to using root hints if resolvconf is unset
 
 local function connect_server(unbound, server)
 	log("debug", "Setting up net.server event handling for %s", unbound);
