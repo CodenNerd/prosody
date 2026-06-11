@@ -43,14 +43,14 @@ local function add_defaults(conf, use_dnssec)
 			conf[option] = default;
 		end
 	end
-	if use_dnssec ~= false then
-		if conf["trustfile"] == nil and conf["trusted"] == nil then
-			conf["trustfile"] = trustfile;
-		end
-	end
 	for option, default in pairs(libunbound.config) do
 		if conf[option] == nil then
 			conf[option] = default;
+		end
+	end
+	if use_dnssec ~= false then
+		if conf["trustfile"] == nil and conf["trusted"] == nil then
+			conf["trustfile"] = trustfile;
 		end
 	end
 	return conf;
