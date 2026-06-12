@@ -3,7 +3,7 @@ local it = require "prosody.util.iterators";
 local version_compare = require "prosody.util.human.io".simple_version_compare;
 
 local latest_version = "6.0"
-local default_version = "5.7";
+local default_version = "6.0";
 local default_profile = "intermediate"; -- should exist in all profiles
 
 -- https://datatracker.ietf.org/doc/html/rfc7919#appendix-A.1
