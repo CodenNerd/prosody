@@ -1350,9 +1350,9 @@ local function check(arg)
 						end
 						if use_dane then
 							if cert.pubkey then
-								print("    DANE: TLSA 3 1 1 "..sha256(pem2der(cert:pubkey()), true))
+								print("    DANE: TLSA DANE-EE(3) SPKI(1) SHA2-256(1) "..sha256(pem2der(cert:pubkey()), true))
 							elseif cert.pem then
-								print("    DANE: TLSA 3 0 1 "..sha256(pem2der(cert:pem()), true))
+								print("    DANE: TLSA DANE-EE(3) Cert(0) SHA2-256(1) "..sha256(pem2der(cert:pem()), true))
 							end
 						end
 					end
