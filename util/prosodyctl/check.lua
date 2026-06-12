@@ -916,6 +916,7 @@ local function check(arg)
 		local s2s_ports = global:get_option_set("s2s_ports", {5269});
 		local c2s_tls_ports = global:get_option_set("c2s_direct_tls_ports", {});
 		local s2s_tls_ports = global:get_option_set("s2s_direct_tls_ports", {});
+		local use_dane = global:get_option_boolean("use_dane", true);
 
 		local global_enabled = set.new();
 		for host in enabled_hosts() do
@@ -1042,6 +1043,12 @@ local function check(arg)
 						targets:add(target);
 						if not ports:contains(record.srv.port) then
 							print("    SRV target " .. target .. " contains unknown " .. description .. " port: " .. record.srv.port);
+						end
+						if use_dane and res.secure then
+							local tlsa = dns.lookup("_"..record.srv.port.."._tcp."..target..".", "TLSA");
+							for i = 1, #tlsa do
+								print("    DANE: " .. tostring(tlsa[i]));
+							end
 						end
 					end
 				elseif required then
