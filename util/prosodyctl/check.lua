@@ -1019,7 +1019,6 @@ local function check(arg)
 				modules:add(component_module);
 			end
 
-			-- TODO Refactor these DNS SRV checks since they are very similar
 			-- FIXME Suggest concrete actionable steps to correct issues so that
 			-- users don't have to copy-paste the message into the support chat and
 			-- ask what to do about it.
@@ -1028,90 +1027,50 @@ local function check(arg)
 			if node then
 				print("Only the domain part ("..host..") is used in DNS.")
 			end
+
+			local function check_srv(domain, service, ports, required, fallback, description)
+				local srv_ok = true;
+				local targets = set.new();
+				local res = dns.lookup("_" .. service .. "._tcp." .. idna.to_ascii(domain) .. ".", "SRV");
+				if res and #res > 0 then
+					for _, record in ipairs(res) do
+						if record.srv.target == "." then
+							print("    '" .. service .. "' service disabled by pointing to '.'"); -- FIXME Explain better what this is
+							break
+						end
+						local target = trim_dns_name(record.srv.target);
+						targets:add(target);
+						if not ports:contains(record.srv.port) then
+							print("    SRV target " .. target .. " contains unknown " .. description .. " port: " .. record.srv.port);
+						end
+					end
+				elseif required then
+					print("    No _" .. service .. " SRV record found for " .. domain .. ", but it looks like you need one.");
+					srv_ok = false;
+				elseif fallback then
+					targets:add(domain);
+				end
+				return srv_ok, targets;
+			end
+
 			local target_hosts = set.new();
 			if modules:contains("c2s") then
-				local res = dns.lookup("_xmpp-client._tcp."..idna.to_ascii(host)..".", "SRV");
-				if res and #res > 0 then
-					for _, record in ipairs(res) do
-						if record.srv.target == "." then -- TODO is this an error if mod_c2s is enabled?
-							print("    'xmpp-client' service disabled by pointing to '.'"); -- FIXME Explain better what this is
-							break;
-						end
-						local target = trim_dns_name(record.srv.target);
-						target_hosts:add(target);
-						if not c2s_ports:contains(record.srv.port) then
-							print("    SRV target "..target.." contains unknown client port: "..record.srv.port);
-						end
-					end
-				else
-					if c2s_srv_required then
-						print("    No _xmpp-client SRV record found for "..host..", but it looks like you need one.");
-						all_targets_ok = false;
-					else
-						target_hosts:add(host);
-					end
-				end
-			end
-			if modules:contains("c2s") then
-				local res = dns.lookup("_xmpps-client._tcp."..idna.to_ascii(host)..".", "SRV");
-				if res and #res > 0 then
-					for _, record in ipairs(res) do
-						if record.srv.target == "." then -- TODO is this an error if mod_c2s is enabled?
-							print("    'xmpps-client' service disabled by pointing to '.'"); -- FIXME Explain better what this is
-							break;
-						end
-						local target = trim_dns_name(record.srv.target);
-						target_hosts:add(target);
-						if not c2s_tls_ports:contains(record.srv.port) then
-							print("    SRV target "..target.." contains unknown Direct TLS client port: "..record.srv.port);
-						end
-					end
-				elseif c2s_tls_srv_required then
-					print("    No _xmpps-client SRV record found for "..host..", but it looks like you need one.");
-					all_targets_ok = false;
-				end
+				local c2s_ok, c2s_targets = check_srv(host, "xmpp-client", c2s_ports, c2s_srv_required, true, "client");
+				if not c2s_ok then all_targets_ok = false; end
+				target_hosts = target_hosts + c2s_targets;
+
+				local c2s_tls_ok, c2s_tls_targets = check_srv(host, "xmpps-client", c2s_tls_ports, c2s_tls_srv_required, false, "Direct TLS client");
+				if not c2s_tls_ok then all_targets_ok = false; end
+				target_hosts = target_hosts + c2s_tls_targets;
 			end
 			if modules:contains("s2s") then
-				local res = dns.lookup("_xmpp-server._tcp."..idna.to_ascii(host)..".", "SRV");
-				if res and #res > 0 then
-					for _, record in ipairs(res) do
-						if record.srv.target == "." then -- TODO Is this an error if mod_s2s is enabled?
-							print("    'xmpp-server' service disabled by pointing to '.'"); -- FIXME Explain better what this is
-							break;
-						end
-						local target = trim_dns_name(record.srv.target);
-						target_hosts:add(target);
-						if not s2s_ports:contains(record.srv.port) then
-							print("    SRV target "..target.." contains unknown server port: "..record.srv.port);
-						end
-					end
-				else
-					if s2s_srv_required then
-						print("    No _xmpp-server SRV record found for "..host..", but it looks like you need one.");
-						all_targets_ok = false;
-					else
-						target_hosts:add(host);
-					end
-				end
-			end
-			if modules:contains("s2s") then
-				local res = dns.lookup("_xmpps-server._tcp."..idna.to_ascii(host)..".", "SRV");
-				if res and #res > 0 then
-					for _, record in ipairs(res) do
-						if record.srv.target == "." then -- TODO is this an error if mod_s2s is enabled?
-							print("    'xmpps-server' service disabled by pointing to '.'"); -- FIXME Explain better what this is
-							break;
-						end
-						local target = trim_dns_name(record.srv.target);
-						target_hosts:add(target);
-						if not s2s_tls_ports:contains(record.srv.port) then
-							print("    SRV target "..target.." contains unknown Direct TLS server port: "..record.srv.port);
-						end
-					end
-				elseif s2s_tls_srv_required then
-					print("    No _xmpps-server SRV record found for "..host..", but it looks like you need one.");
-					all_targets_ok = false;
-				end
+				local s2s_ok, s2s_targets = check_srv(host, "xmpp-server", s2s_ports, s2s_srv_required, true, "server");
+				if not s2s_ok then all_targets_ok = false; end
+				target_hosts = target_hosts + s2s_targets;
+
+				local s2s_tls_ok, s2s_tls_targets = check_srv(host, "xmpps-server", s2s_tls_ports, s2s_tls_srv_required, false, "Direct TLS server");
+				if not s2s_tls_ok then all_targets_ok = false; end
+				target_hosts = target_hosts + s2s_tls_targets;
 			end
 			if target_hosts:empty() then
 				target_hosts:add(host);
