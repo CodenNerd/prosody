@@ -51,10 +51,8 @@ local function add_defaults(conf, use_dnssec)
 	if use_dnssec == false then
 		conf["trustfile"] = nil;
 		conf["trusted"] = nil;
-	elseif use_dnssec ~= false then
-		if conf["trustfile"] == nil and conf["trusted"] == nil then
-			conf["trustfile"] = trustfile;
-		end
+	elseif conf["trustfile"] == nil and conf["trusted"] == nil then
+		conf["trustfile"] = trustfile;
 	end
 	return conf;
 end
