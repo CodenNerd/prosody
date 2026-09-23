@@ -1199,7 +1199,7 @@ local function setquitting(quit)
 end
 
 local function loop_once()
-	runtimers(); -- Ignore return value because we only do this once
+	runtimers(cfg.max_wait, cfg.min_wait); -- Ignore return value because we only do this once
 	local fd, r, w = poll:wait(0);
 	if fd then
 		local conn = fds[fd];
