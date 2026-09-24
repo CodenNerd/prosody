@@ -541,6 +541,10 @@ function interface:onwritable()
 	self:onconnect();
 	if not self.conn then return nil, "no-conn"; end -- could have been closed in onconnect
 	self:on("predrain");
+	if not self.conn then -- The predrain handler may have destroyed the connection.
+		self._writing = nil;
+		return nil, "no-conn";
+	end
 	local buffer = self.writebuffer or "";
 	-- Naming things ... s/data/slice/ ?
 	local data = buffer:sub(1, cfg.max_send_chunk);
@@ -593,6 +597,7 @@ end
 
 -- Add data to write buffer and set flag for wanting to write
 function interface:write(data)
+	if not self.conn then return nil, "closed"; end
 	local buffer = self.writebuffer;
 	-- (nil)    -> save string
 	-- (string) -> convert to buffer (3 tables!)
@@ -709,6 +714,7 @@ function interface:destroy()
 	self.on = noop;
 	self.conn:close();
 	self.conn = nil;
+	self.writebuffer = nil;
 end
 
 function interface:ssl()
@@ -1024,6 +1030,7 @@ local function wrapserver(conn, addr, port, listeners, config)
 		listeners = listeners;
 		read_size = config and config.read_size;
 		onreadable = interface.onacceptable;
+		setreadtimeout = noop;
 		tls_ctx = config and config.tls_ctx;
 		tls_direct = config and config.tls_direct;
 		hosts = config and config.sni_hosts;
