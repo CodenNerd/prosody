@@ -285,7 +285,7 @@ module:add_item("shell-command", {
 		local invite = assert(create_account(username, {
 			roles = roles;
 			groups = groups;
-		}, ttl, opts.reusable));
+		}, ttl, opts and opts.reusable));
 
 		return true, invite.landing_page or invite.uri;
 	end;
@@ -345,7 +345,7 @@ module:add_item("shell-command", {
 				return nil, "Unable to parse duration: "..opts.expires_after;
 			end
 		end
-		local invite, err = create_contact(username, opts and opts.allow_registration, nil, ttl, opts.reusable);
+		local invite, err = create_contact(username, opts and opts.allow_registration, nil, ttl, opts and opts.reusable);
 		if not invite then return nil, err; end
 		return true, invite.landing_page or invite.uri;
 	end;
