@@ -1,4 +1,5 @@
 local sasl = require "util.sasl";
+local json = require "util.json"
 
 -- profile * mechanism
 -- callbacks could use spies instead
@@ -46,7 +47,7 @@ describe("util.sasl", function ()
 				if token == "example-bearer-token" then
 					return "user", true, {};
 				else
-					return nil, nil, {}
+					return nil, nil, { oidc_discovery_url = "https://auth.example.com/.well-known/oauth-authorization-server" }
 				end
 			end;
 		}
@@ -66,7 +67,10 @@ describe("util.sasl", function ()
 			assert.truthy(bearer:select("OAUTHBEARER"));
 			local status, extra = bearer:process("n,,\1auth=Bearer unknown\1\1");
 			assert.equals("challenge", status);
-			assert.equals("{\"status\":\"invalid_token\"}", extra);
+			assert.same({
+				status = "invalid_token";
+				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
+			}, json.decode(extra));
 			assert.equals("failure", bearer:process("\1"));
 		end)
 
@@ -76,7 +80,10 @@ describe("util.sasl", function ()
 			assert.truthy(bearer:select("OAUTHBEARER"));
 			local status, extra = bearer:process("\1");
 			assert.equals("challenge", status);
-			assert.equals("{\"status\":\"invalid_token\"}", extra);
+			assert.same({
+				status = "invalid_token";
+				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
+			}, json.decode(extra));
 			assert.equals("failure", bearer:process("\1"));
 
 		end);
