@@ -70,6 +70,17 @@ describe("util.sasl", function ()
 			assert.equals("failure", bearer:process("\1"));
 		end)
 
+		it("allows a minimal initial response", function ()
+			local bearer = sasl.new("sasl.test", profile);
+
+			assert.truthy(bearer:select("OAUTHBEARER"));
+			local status, extra = bearer:process("\1");
+			assert.equals("challenge", status);
+			assert.equals("{\"status\":\"invalid_token\"}", extra);
+			assert.equals("failure", bearer:process("\1"));
+
+		end);
+
 	end)
 end);
 
