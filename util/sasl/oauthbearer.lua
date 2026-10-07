@@ -7,7 +7,7 @@ local function parse_initial_client_response(message) --> success, string...
 		return true;
 	end
 
-	local gs2_header, kvpairs = message:match("^(n,[^,]*,)\001(.+)\001$");
+	local gs2_header, kvpairs = message:match("^(n,[^,]*,)\001(.*)\001$");
 
 	if not gs2_header then
 		return false, "malformed-request";
@@ -17,16 +17,20 @@ local function parse_initial_client_response(message) --> success, string...
 	local gs2_authzid = gs2_header:match("^[^,]*,a=([^,]*),$");
 
 	-- key "=" value kvsep
-	local auth_header;
-	for k, v in kvpairs:gmatch("([a-zA-Z]+)=([\033-\126 \009\r\n]*)\001") do
+	local auth_header, consumed = nil, 0;
+	for k, v, epos in kvpairs:gmatch("([a-zA-Z]+)=([\033-\126 \009\r\n]*)\001()") do
+		consumed = epos - 1;
 		if k == "auth" then
 			auth_header = v;
-			break;
 		end
 	end
 
+	if consumed ~= #kvpairs then
+		return false;
+	end
+
 	local token;
-	if auth_header then
+	if auth_header and auth_header ~= "" then
 		token = auth_header:match("^Bearer (.+)$");
 		if not token then
 			return false, "malformed-request";

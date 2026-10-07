@@ -61,12 +61,38 @@ describe("util.sasl", function ()
 		end)
 
 
-		it("returns extras with OAUTHBEARER", function()
+		it("returns extras with OAUTHBEARER on invalid token", function()
 			local bearer = sasl.new("sasl.test", profile);
 
 			assert.truthy(bearer:select("OAUTHBEARER"));
 			local status, extra = bearer:process("n,,\1auth=Bearer unknown\1\1");
-			assert.equals("challenge", status);
+			assert.equals("challenge", status, tostring(extra));
+			assert.same({
+				status = "invalid_token";
+				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
+			}, json.decode(extra));
+			assert.equals("failure", bearer:process("\1"));
+		end)
+
+		it("returns extras with OAUTHBEARER with empty auth header", function()
+			local bearer = sasl.new("sasl.test", profile);
+
+			assert.truthy(bearer:select("OAUTHBEARER"));
+			local status, extra = bearer:process("n,,\1auth=\1\1");
+			assert.equals("challenge", status, tostring(extra));
+			assert.same({
+				status = "invalid_token";
+				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
+			}, json.decode(extra));
+			assert.equals("failure", bearer:process("\1"));
+		end)
+
+		it("returns extras with OAUTHBEARER without auth header", function()
+			local bearer = sasl.new("sasl.test", profile);
+
+			assert.truthy(bearer:select("OAUTHBEARER"));
+			local status, extra = bearer:process("n,,\1\1");
+			assert.equals("challenge", status, tostring(extra));
 			assert.same({
 				status = "invalid_token";
 				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
@@ -79,7 +105,7 @@ describe("util.sasl", function ()
 
 			assert.truthy(bearer:select("OAUTHBEARER"));
 			local status, extra = bearer:process("\1");
-			assert.equals("challenge", status);
+			assert.equals("challenge", status, tostring(extra));
 			assert.same({
 				status = "invalid_token";
 				["openid-configuration"] = "https://auth.example.com/.well-known/oauth-authorization-server";
@@ -88,6 +114,28 @@ describe("util.sasl", function ()
 
 		end);
 
+		it("rejects responses with malformed framing or stray data", function ()
+			-- Anything in the kvpair region that is not key "=" value kvsep is invalid.
+			local cases = {
+				-- No GS2 header at all
+				"\1something\1foo=bar\1";
+				-- Stray token before a valid kvpair
+				"n,,\1something\1foo=bar\1";
+				-- Valid token followed by stray data; must not authenticate
+				"n,,\1auth=Bearer example-bearer-token\1something\1";
+				-- Missing final kvsep
+				"n,,\1auth=Bearer example-bearer-token\1"
+			};
+
+			for _, message in ipairs(cases) do
+				local bearer = sasl.new("sasl.test", profile);
+				assert.truthy(bearer:select("OAUTHBEARER"));
+				local status, err = bearer:process(message);
+				assert.equals("failure", status, ("%q -> %s"):format(message, tostring(err)));
+				assert.equals("malformed-request", err, ("%q"):format(message));
+				assert.is_nil(bearer.username, ("%q"):format(message));
+			end
+		end);
 	end)
 end);
 
