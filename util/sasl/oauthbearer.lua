@@ -10,7 +10,7 @@ local function parse_initial_client_response(message) --> success, string...
 	local gs2_header, kvpairs = message:match("^(n,[^,]*,)\001(.*)\001$");
 
 	if not gs2_header then
-		return false, "malformed-request";
+		return false;
 	end
 
 	-- gs2-header kvsep *kvpair kvsep
@@ -33,7 +33,7 @@ local function parse_initial_client_response(message) --> success, string...
 	if auth_header and auth_header ~= "" then
 		token = auth_header:match("^Bearer (.+)$");
 		if not token then
-			return false, "malformed-request";
+			return false;
 		end
 	end
 
@@ -51,7 +51,7 @@ local function oauthbearer(self, message)
 
 	local parsed, token, gs2_authzid = parse_initial_client_response(message);
 	if not parsed then
-		return "failure", token or "malformed-request";
+		return "failure", "malformed-request";
 	end
 
 	local username, state, token_info = self.profile.oauthbearer(self, token, self.realm, gs2_authzid);
