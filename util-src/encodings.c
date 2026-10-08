@@ -1,7 +1,7 @@
 /* Prosody IM
 -- Copyright (C) 2008-2010 Matthew Wild
 -- Copyright (C) 2008-2010 Waqas Hussain
--- Copyright (C) 1994-2015 Lua.org, PUC-Rio.
+-- Copyright (C) 1994-2026 Lua.org, PUC-Rio.
 --
 -- This project is MIT/X11 licensed. Please see the
 -- COPYING file in the source package for more information.
@@ -16,6 +16,7 @@
 /* Newer MSVC compilers deprecate strcpy as unsafe, but we use it in a safe way */
 #define _CRT_SECURE_NO_DEPRECATE
 
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include "lua.h"
@@ -165,51 +166,70 @@ static const luaL_Reg Reg_base64[] = {
 /******************* UTF-8 ********************/
 
 /*
- * Adapted from Lua 5.3
+ * Adapted from Lua 5.5.1 lutf8lib.c
+ * https://github.com/lua/lua/commit/10eb89d1141dc528806b32401e408e36fb2f3bf5
  * Needed because libidn does not validate that input is valid UTF-8
  */
 
-#define MAXUNICODE	0x10FFFF
+#define MAXUNICODE	0x10FFFFu
+#define MAXUTF		0x7FFFFFFFu
 
 /*
- * Decode one UTF-8 sequence, returning NULL if byte sequence is invalid.
+ * Integer type for decoded UTF-8 values; MAXUTF needs 31 bits.
  */
-static const char *utf8_decode(const char *o, int *val) {
-	static const unsigned int limits[] = {0xFF, 0x7F, 0x7FF, 0xFFFF};
-	const unsigned char *s = (const unsigned char *)o;
-	unsigned int c = s[0];
-	unsigned int res = 0;  /* final result */
+#if (UINT_MAX >> 30) >= 1
+typedef unsigned int utfint;
+#else
+typedef unsigned long utfint;
+#endif
 
-	if(c < 0x80) { /* ascii? */
+#define iscont(c)	(((c) & 0xC0) == 0x80)
+
+/*
+ * Decode one UTF-8 sequence, returning NULL if byte sequence is
+ * invalid.  The array 'limits' stores the minimum value for each
+ * sequence length, to check for overlong representations. Its first
+ * entry forces an error for non-ASCII bytes with no continuation
+ * bytes (count == 0).
+ */
+static const char *utf8_decode(const char *s, utfint *val, int strict) {
+	static const utfint limits[] =
+		{~(utfint)0, 0x80, 0x800, 0x10000u, 0x200000u, 0x4000000u};
+	unsigned int c = (unsigned char)s[0];
+	utfint res = 0;  /* final result */
+
+	if(c < 0x80) {  /* ASCII? */
 		res = c;
+	} else if(c >= 0xfe) {  /* c >= 1111 1110b ? */
+		return NULL;  /* would need six or more continuation bytes */
 	} else {
 		int count = 0;  /* to count number of continuation bytes */
-
-		while(c & 0x40) {   /* still have continuation bytes? */
-			int cc = s[++count];  /* read next byte */
-
-			if((cc & 0xC0) != 0x80) { /* not a continuation byte? */
-				return NULL;    /* invalid byte sequence */
+		for(; c & 0x40; c <<= 1) {  /* while it needs continuation bytes... */
+			unsigned int cc = (unsigned char)s[++count];  /* read next byte */
+			if(!iscont(cc)) {  /* not a continuation byte? */
+				return NULL;  /* invalid byte sequence */
 			}
-
 			res = (res << 6) | (cc & 0x3F);  /* add lower 6 bits from cont. byte */
-			c <<= 1;  /* to test next bit */
 		}
-
-		res |= ((c & 0x7F) << (count * 5));  /* add first byte */
-
-		if(count > 3 || res > MAXUNICODE || res <= limits[count] || (0xd800 <= res && res <= 0xdfff)) {
-			return NULL;    /* invalid byte sequence */
+		res |= ((utfint)(c & 0x7F) << (count * 5));  /* add first byte */
+		if(res > MAXUTF || res < limits[count]) {
+			return NULL;  /* invalid byte sequence */
 		}
-
 		s += count;  /* skip continuation bytes read */
+	}
+
+	if(strict) {
+		/* check for invalid code points; too large or surrogates */
+		if(res > MAXUNICODE || (0xD800u <= res && res <= 0xDFFFu)) {
+			return NULL;
+		}
 	}
 
 	if(val) {
 		*val = res;
 	}
 
-	return (const char *)s + 1;  /* +1 to include first byte */
+	return s + 1;  /* +1 to include first byte */
 }
 
 /*
@@ -222,7 +242,7 @@ static const char *check_utf8(lua_State *L, int idx, size_t *l) {
 	pos = 0;
 
 	while(pos <= len) {
-		const char *s1 = utf8_decode(s + pos, NULL);
+		const char *s1 = utf8_decode(s + pos, NULL, 1);
 
 		if(s1 == NULL) {   /* conversion error? */
 			return NULL;
