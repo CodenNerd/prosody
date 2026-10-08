@@ -286,6 +286,12 @@ static int Ldel(lua_State *L) {
 	int ret = epoll_ctl(state->epoll_fd, EPOLL_CTL_DEL, fd, &event);
 
 	if(ret == 0) {
+		/* Invalidate events already returned by epoll_wait for this registration. */
+		for(int i = 0; i < state->processed; i++) {
+			if(state->events[i].data.fd == fd) {
+				state->events[i].data.fd = -1;
+			}
+		}
 		lua_pushboolean(L, 1);
 		return 1;
 	}
@@ -367,9 +373,12 @@ static int Ldel(lua_State *L) {
 static int Lpushevent(lua_State *L, struct Lpoll_state *state) {
 #ifdef USE_EPOLL
 
-	if(state->processed > 0) {
+	while(state->processed > 0) {
 		state->processed--;
 		struct epoll_event event = state->events[state->processed];
+		if(event.data.fd == -1) {
+			continue;
+		}
 		lua_pushinteger(L, event.data.fd);
 		lua_pushboolean(L, event.events & (EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR));
 		lua_pushboolean(L, event.events & EPOLLOUT);
