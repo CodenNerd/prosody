@@ -722,7 +722,7 @@ function interface:ssl()
 end
 
 function interface:set_sslctx(sslctx)
-	self._sslctx = sslctx;
+	self.tls_ctx = sslctx;
 end
 
 function interface:sslctx()
