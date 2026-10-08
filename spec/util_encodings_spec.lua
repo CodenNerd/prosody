@@ -23,6 +23,20 @@ describe("util.encodings", function ()
 end);
 describe("util.encodings.utf8", function()
 	describe("#valid()", function()
+		it("rejects oversized sequences before shifting", function()
+			assert.is_false(utf8.valid("\255\143\143\143\143\143\143\143"));
+			assert.is_false(utf8.valid("\254\128\128\128\128\128\128"));
+		end);
+
+		it("keeps strict Unicode validation", function()
+			assert.is_false(utf8.valid("\237\160\128")); -- U+D800
+			assert.is_false(utf8.valid("\244\144\128\128")); -- U+110000
+			assert.is_false(utf8.valid("\248\136\128\128\128")); -- U+200000
+			assert.is_false(utf8.valid("\252\132\128\128\128\128")); -- U+4000000
+			assert.is_true(utf8.valid("\244\143\191\191")); -- U+10FFFF
+			assert.is_true(utf8.valid("a\0b"));
+		end);
+
 		it("should work", function()
 
 			for line in io.lines("spec/utf8_sequences.txt") do
