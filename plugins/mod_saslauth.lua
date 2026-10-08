@@ -347,8 +347,9 @@ module:hook("stream-features", function(event)
 				end
 
 				local certfile;
-				if tls_server_end_point_hash == "auto" then
-					tls_server_end_point_hash = nil;
+				local cert_hash = tls_server_end_point_hash;
+				if cert_hash == "auto" then
+					cert_hash = nil;
 					local ssl_cfg = origin.ssl_cfg;
 					if not ssl_cfg then
 						local server = origin.conn:server();
@@ -365,7 +366,7 @@ module:hook("stream-features", function(event)
 					else
 						log("debug", "Channel binding 'tls-server-end-point' set to 'auto' but cannot determine cert");
 					end
-				elseif tls_server_end_point_hash then
+				elseif cert_hash then
 					log("debug", "Channel binding 'tls-server-end-point' can be offered with the configured certificate hash");
 					sasl_handler:add_cb_handler("tls-server-end-point", tls_server_end_point);
 					channel_bindings:add("tls-server-end-point");
@@ -376,7 +377,7 @@ module:hook("stream-features", function(event)
 					["tls-exporter"] = origin.conn;
 					["tls-server-end-point-cert"] = certfile;
 					["tls-server-end-point-conn"] = origin.conn;
-					["tls-server-end-point"] = tls_server_end_point_hash;
+					["tls-server-end-point"] = cert_hash;
 				};
 			else
 				log("debug", "Channel binding not supported by SASL handler");
