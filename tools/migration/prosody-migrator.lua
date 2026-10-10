@@ -272,6 +272,14 @@ local migration_runner = async.runner(function (job)
 				migrate(origin, destination, user, prefix, input_driver, output_driver);
 			end
 		end
+		-- TODO: This should be done in modulemanager
+		local host_session = prosody.hosts[host]
+		if host_session.modules then
+			for module in pairs(host_session.modules) do
+				mm.unload(host, module);
+			end
+		end
+		prosody.hosts[host] = nil;
 	end
 end, watchers);
 
