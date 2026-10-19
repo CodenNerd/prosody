@@ -33,7 +33,7 @@ endif
 
 install-etc: prosody.cfg.lua.install
 	$(MKDIR) $(CONFIG)
-	$(MKDIR) $(CONFIG)/certs
+	$(MKDIR_PRIVATE) $(CONFIG)/certs
 	$(INSTALL_DATA) certs/* $(CONFIG)/certs
 	test -f $(CONFIG)/prosody.cfg.lua || $(INSTALL_DATA) prosody.cfg.lua.install $(CONFIG)/prosody.cfg.lua
 
