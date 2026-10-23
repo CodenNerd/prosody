@@ -1047,7 +1047,7 @@ local function check(arg)
 						if use_dane and res.secure then
 							local tlsa = dns.lookup("_"..record.srv.port.."._tcp."..target..".", "TLSA");
 							for i = 1, #tlsa do
-								print("    DANE: " .. tostring(tlsa[i]));
+								print("    DANE: TLSA " .. tostring(tlsa[i]));
 							end
 						end
 					end
