@@ -10,12 +10,18 @@
 -- (because unbounded dynamically-growing queues are a bad thing...)
 
 local have_utable, utable = pcall(require, "prosody.util.table"); -- For pre-allocation of table
+local math_min = math.min;
 
-local function new(size, allow_wrapping)
+-- Tables are preallocated up to this size, when no initial_size is provided
+-- It's about 2KB RAM, and should provide a decent trade-off between excessive
+-- reallocs and excessive RAM consumption
+local default_size_limit = 128;
+
+local function new(size, allow_wrapping, initial_size)
 	-- Head is next insert, tail is next read
 	local head, tail = 1, 1;
 	local items = 0; -- Number of stored items
-	local t = have_utable and utable.create(size, 0) or {}; -- Table to hold items
+	local t = have_utable and utable.create(initial_size or math_min(size, default_size_limit), 0) or {}; -- Table to hold items
 	--luacheck: ignore 212/self
 	return {
 		_items = t;
