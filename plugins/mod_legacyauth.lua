@@ -45,7 +45,7 @@ module:hook("stanza/iq/jabber:iq:auth:query", function(event)
 		return true;
 	end
 
-	local query = stanza.tags[1];
+	local query = stanza:get_first_child();
 	local username = query:get_child("username");
 	local password = query:get_child("password");
 	local resource = query:get_child("resource");

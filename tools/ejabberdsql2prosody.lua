@@ -315,11 +315,18 @@ end
 for _, row in ipairs(parsed["spool"] or NULL) do
 	local stanza, err = parse_xml(row.xml);
 	if stanza then
-		local last_child = stanza.tags[#stanza.tags];
-		if not last_child or last_child ~= stanza[#stanza] then error("Last child of offline message is not a tag"); end
-		if last_child.name ~= "x" and last_child.attr.xmlns ~= "jabber:x:delay" then error("Last child of offline message is not a timestamp"); end
-		stanza[#stanza], stanza.tags[#stanza.tags] = nil, nil;
-		local t = date_parse(last_child.attr.stamp);
+		local stamp;
+		stanza:maptags(function (tag)
+			if tag.name == "x" and tag.attr.xmlns == "jabber:x:delay" then
+				stamp = tag;
+				return nil;
+			end
+			return tag;
+		end);
+		if not stamp then
+			error("Couldn't find timestamp in offline message");
+		end
+		local t = date_parse(stamp.attr.stamp);
 		offline_msg(row.username, hostname, t, stanza);
 	else
 		print("[error] Offline message XML parsing failed: "..row.username.."@"..hostname);

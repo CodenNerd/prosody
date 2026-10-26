@@ -116,8 +116,8 @@ function simple_broadcast(kind, node, jids, item, actor, node_obj, service) --lu
 	end
 
 	local summary;
-	if item and item.tags[1] then
-		local payload = item.tags[1];
+	local payload = item and item:get_first_child();
+	if payload then
 		local payload_type = node_obj and node_obj.config.payload_type or payload.attr.xmlns;
 		summary = module:fire_event("pubsub-summary/"..payload_type, {
 			kind = kind, node = node, jids = jids, actor = actor, item = item, payload = payload,
@@ -145,7 +145,7 @@ function check_node_config(node, actor, new_config) -- luacheck: ignore 212/node
 end
 
 function is_item_stanza(item)
-	return st.is_stanza(item) and item.attr.xmlns == xmlns_pubsub and item.name == "item" and #item.tags == 1;
+	return st.is_stanza(item) and item.attr.xmlns == xmlns_pubsub and item.name == "item" and item:has_single_child_tag();
 end
 
 function get_item_metadata(item)

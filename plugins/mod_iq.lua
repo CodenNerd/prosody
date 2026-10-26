@@ -33,7 +33,7 @@ module:hook("iq/bare", function(data)
 
 	-- TODO fire post processing events
 	if type == "get" or type == "set" then
-		local child = stanza.tags[1];
+		local child = stanza:get_first_child();
 		local xmlns = child.attr.xmlns or "jabber:client";
 		local ret = module:fire_event("iq/bare/"..xmlns..":"..child.name, data);
 		if ret ~= nil then return ret; end
@@ -49,7 +49,7 @@ module:hook("iq/self", function(data)
 	local type = stanza.attr.type;
 
 	if type == "get" or type == "set" then
-		local child = stanza.tags[1];
+		local child = stanza:get_first_child();
 		local xmlns = child.attr.xmlns or "jabber:client";
 		local ret = module:fire_event("iq/self/"..xmlns..":"..child.name, data);
 		if ret ~= nil then return ret; end
@@ -65,7 +65,7 @@ module:hook("iq/host", function(data)
 	local type = stanza.attr.type;
 
 	if type == "get" or type == "set" then
-		local child = stanza.tags[1];
+		local child = stanza:get_first_child();
 		local xmlns = child.attr.xmlns or "jabber:client";
 		local ret = module:fire_event("iq/host/"..xmlns..":"..child.name, data);
 		if ret ~= nil then return ret; end

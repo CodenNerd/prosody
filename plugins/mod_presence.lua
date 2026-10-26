@@ -39,14 +39,16 @@ module:hook("stream-features", function(event)
 	end
 end);
 
+local function replace_priority(tag)
+	if tag.name == "priority" then
+		return st.stanza("priority"):add_text("0");
+	end
+	return tag;
+end
+
 function handle_normal_presence(origin, stanza)
 	if ignore_presence_priority then
-		local priority = stanza:get_child("priority");
-		if priority and priority[1] ~= "0" then
-			for i=#priority.tags,1,-1 do priority.tags[i] = nil; end
-			for i=#priority,2,-1 do priority[i] = nil; end
-			priority[1] = "0";
-		end
+		stanza:maptags(replace_priority);
 	end
 	local priority = stanza:get_child_text("priority");
 	if priority and s_find(priority, "^[+-]?[0-9]+$") then

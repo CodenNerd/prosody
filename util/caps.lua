@@ -17,7 +17,7 @@ local _ENV = nil;
 
 local function calculate_hash(disco_info)
 	local identities, features, extensions = {}, {}, {};
-	for _, tag in ipairs(disco_info) do
+	for tag in disco_info:childtags() do
 		if tag.name == "identity" then
 			t_insert(identities, (tag.attr.category or "").."\0"..(tag.attr.type or "").."\0"..(tag.attr["xml:lang"] or "").."\0"..(tag.attr.name or ""));
 		elseif tag.name == "feature" then
@@ -25,11 +25,11 @@ local function calculate_hash(disco_info)
 		elseif tag.name == "x" and tag.attr.xmlns == "jabber:x:data" then
 			local form = {};
 			local FORM_TYPE;
-			for _, field in ipairs(tag.tags) do
-				if field.name == "field" and field.attr.var then
+			for field in tag:childtags("field") do
+				if field.attr.var then
 					local values = {};
-					for _, val in ipairs(field.tags) do
-						val = #val.tags == 0 and val:get_text();
+					for val in field:childtags() do
+						val = not val:has_child_tags() and val:get_text();
 						if val then t_insert(values, val); end
 					end
 					t_sort(values);

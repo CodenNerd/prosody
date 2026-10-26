@@ -118,7 +118,7 @@ local function edit_blocklist(event)
 	local now = os.time();
 	local origin, stanza = event.origin, event.stanza;
 	local username = origin.username;
-	local action = stanza.tags[1]; -- "block" or "unblock"
+	local action = stanza:get_first_child(); -- "block" or "unblock"
 	local is_blocking = action.name == "block" and now or nil; -- nil if unblocking
 	local new = {}; -- JIDs to block depending or unblock on action
 

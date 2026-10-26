@@ -74,7 +74,7 @@ end, 1);
 
 -- Client is submitting a preauth token to allow registration
 module:hook("stanza/iq/urn:xmpp:pars:0:preauth", function(event)
-	local preauth = event.stanza.tags[1];
+	local preauth = event.stanza:get_first_child();
 	local token = preauth.attr.token;
 	local validated_invite = invites.get(token);
 	if not validated_invite then

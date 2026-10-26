@@ -227,7 +227,7 @@ end
 function handle_slot_request(event)
 	local stanza, origin = event.stanza, event.origin;
 
-	local request = st.clone(stanza.tags[1], true);
+	local request = st.clone(stanza:get_first_child(), true);
 	local filename = request.attr.filename;
 	local filesize = tonumber(request.attr.size);
 	local filetype = request.attr["content-type"] or "application/octet-stream";

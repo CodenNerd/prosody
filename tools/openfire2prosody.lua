@@ -59,55 +59,51 @@ assert(xml.name == "Openfire", "The input file is not an Openfire XML export");
 
 local substatus_mapping = { ["0"] = "none", ["1"] = "to", ["2"] = "from", ["3"] = "both" };
 
-for _,tag in ipairs(xml.tags) do
-	if tag.name == "User" then
-		local username, password, roster;
+for tag in xml:childtags("User") do
+	local username, password, roster;
 
-		for _,tag in ipairs(tag.tags) do
-			if tag.name == "Username" then
-				username = tag:get_text();
-			elseif tag.name == "Password" then
-				password = tag:get_text();
-			elseif tag.name == "Roster" then
-				roster = {};
-				local pending = {};
-				for _,tag in ipairs(tag.tags) do
-					if tag.name == "Item" then
-						local jid = assert(tag.attr.jid, "Roster item has no JID");
-						if tag.attr.substatus ~= "-1" then
-							local item = {};
-							item.name = tag.attr.name;
-							item.subscription = assert(substatus_mapping[tag.attr.substatus], "invalid substatus");
-							item.ask = tag.attr.askstatus == "0" and "subscribe" or nil;
+	for tag in tag:childtags() do
+		if tag.name == "Username" then
+			username = tag:get_text();
+		elseif tag.name == "Password" then
+			password = tag:get_text();
+		elseif tag.name == "Roster" then
+			roster = {};
+			local pending = {};
+			for tag in tag:childtags("Item") do
+				local jid = assert(tag.attr.jid, "Roster item has no JID");
+				if tag.attr.substatus ~= "-1" then
+					local item = {};
+					item.name = tag.attr.name;
+					item.subscription = assert(substatus_mapping[tag.attr.substatus], "invalid substatus");
+					item.ask = tag.attr.askstatus == "0" and "subscribe" or nil;
 
-							local groups = {};
-							for _,tag in ipairs(tag) do
-								if tag.name == "Group" then
-									groups[tag:get_text()] = true;
-								end
-							end
-							item.groups = groups;
-							roster[jid] = item;
+					local groups = {};
+					for _,tag in ipairs(tag) do
+						if tag.name == "Group" then
+							groups[tag:get_text()] = true;
 						end
-						if tag.attr.recvstatus == "1" then pending[jid] = true; end
 					end
+					item.groups = groups;
+					roster[jid] = item;
 				end
+				if tag.attr.recvstatus == "1" then pending[jid] = true; end
+			end
 
-				if next(pending) then
-					roster[false] = { pending = pending };
-				end
+			if next(pending) then
+				roster[false] = { pending = pending };
 			end
 		end
+	end
 
-		assert(username and password, "No username or password");
+	assert(username and password, "No username or password");
 
-		local ret, err = dm.store(username, host, "accounts", {password = password});
-		print("["..(err or "success").."] stored account: "..username.."@"..host.." = "..password);
+	local ret, err = dm.store(username, host, "accounts", {password = password});
+	print("["..(err or "success").."] stored account: "..username.."@"..host.." = "..password);
 
-		if roster then
-			local ret, err = dm.store(username, host, "roster", roster);
-			print("["..(err or "success").."] stored roster: "..username.."@"..host.." = "..password);
-		end
+	if roster then
+		local ret, err = dm.store(username, host, "roster", roster);
+		print("["..(err or "success").."] stored roster: "..username.."@"..host.." = "..password);
 	end
 end
 

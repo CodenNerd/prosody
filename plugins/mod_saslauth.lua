@@ -464,9 +464,8 @@ module:hook("stanza/iq/urn:ietf:params:xml:ns:xmpp-bind:bind", function(event)
 	local origin, stanza = event.origin, event.stanza;
 	local resource = origin.sasl_resource;
 	if stanza.attr.type == "set" and not resource then
-		local bind = stanza.tags[1];
-		resource = bind:get_child("resource");
-		resource = resource and #resource.tags == 0 and resource[1] or nil;
+		local bind = stanza:get_first_child();
+		resource = bind:get_child_text("resource");
 	end
 	local success, err_type, err, err_msg = sm_bind_resource(origin, resource);
 	if success then

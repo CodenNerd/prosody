@@ -49,8 +49,8 @@ end
 module:hook("pep-publish-item", function (event)
 	local session, bare, node, id, item = event.session, event.user, event.node, event.id, event.item;
 	item.attr.xmlns = nil;
-	local disable = #item.tags ~= 1 or #item.tags[1] == 0;
-	if #item.tags == 0 then item.name = "retract"; end
+	local disable = item:get_child_count() ~= 1 or item:get_first_child():get_child_count() == 0;
+	if not item:has_child_tags() then item.name = "retract"; end
 	local stanza = st.message({from=bare, type='headline'})
 		:tag('event', {xmlns='http://jabber.org/protocol/pubsub#event'})
 			:tag('items', {node=node})
@@ -101,16 +101,14 @@ end
 local function get_caps_hash_from_presence(stanza, current)
 	local t = stanza.attr.type;
 	if not t then
-		for _, child in pairs(stanza.tags) do
-			if child.name == "c" and child.attr.xmlns == "http://jabber.org/protocol/caps" then
-				local attr = child.attr;
-				if attr.hash then -- new caps
-					if attr.hash == 'sha-1' and attr.node and attr.ver then return attr.ver, attr.node.."#"..attr.ver; end
-				else -- legacy caps
-					if attr.node and attr.ver then return attr.node.."#"..attr.ver.."#"..(attr.ext or ""), attr.node.."#"..attr.ver; end
-				end
-				return; -- bad caps format
+		for child in stanza:childtags("c", "http://jabber.org/protocol/caps") do
+			local attr = child.attr;
+			if attr.hash then -- new caps
+				if attr.hash == 'sha-1' and attr.node and attr.ver then return attr.ver, attr.node.."#"..attr.ver; end
+			else -- legacy caps
+				if attr.node and attr.ver then return attr.node.."#"..attr.ver.."#"..(attr.ext or ""), attr.node.."#"..attr.ver; end
 			end
+			return; -- bad caps format
 		end
 	elseif t == "unavailable" or t == "error" then
 		return;
@@ -171,13 +169,13 @@ end, 10);
 
 module:hook("iq/bare/http://jabber.org/protocol/pubsub:pubsub", function(event)
 	local session, stanza = event.origin, event.stanza;
-	local payload = stanza.tags[1];
+	local payload = stanza:get_first_child();
 
 	if stanza.attr.type == 'set' and (not stanza.attr.to or jid_bare(stanza.attr.from) == stanza.attr.to) then
-		payload = payload.tags[1]; -- <publish node='http://jabber.org/protocol/tune'>
+		payload = payload:get_first_child(); -- <publish node='http://jabber.org/protocol/tune'>
 		if payload and (payload.name == 'publish' or payload.name == 'retract') and payload.attr.node then
 			local node = payload.attr.node;
-			payload = payload.tags[1];
+			payload = payload:get_first_child();
 			if payload and payload.name == "item" then -- <item>
 				local id = payload.attr.id or "1";
 				payload.attr.id = id;
@@ -198,10 +196,10 @@ module:hook("iq/bare/http://jabber.org/protocol/pubsub:pubsub", function(event)
 		if subscription_presence(user, stanza.attr.from) then
 			local user_data = data[user];
 			local node, requested_id;
-			payload = payload.tags[1];
+			payload = payload:get_first_child();
 			if payload and payload.name == 'items' then
 				node = payload.attr.node;
-				local item = payload.tags[1];
+				local item = payload:get_first_child();
 				if item and item.name == "item" then
 					requested_id = item.attr.id;
 				end
@@ -246,7 +244,7 @@ end);
 module:hook("iq-result/bare/disco", function(event)
 	local session, stanza = event.origin, event.stanza;
 	if stanza.attr.type == "result" then
-		local disco = stanza.tags[1];
+		local disco = stanza:get_first_child();
 		if disco and disco.name == "query" and disco.attr.xmlns == "http://jabber.org/protocol/disco#info" then
 			-- Process disco response
 			local self = not stanza.attr.to;
@@ -256,11 +254,11 @@ module:hook("iq-result/bare/disco", function(event)
 			if type(current) ~= "string" then return; end -- check if waiting for recipient's response
 			local ver = current;
 			if not string.find(current, "#") then
-				ver = calculate_hash(disco.tags); -- calculate hash
+				ver = calculate_hash(disco); -- calculate hash
 			end
 			local notify = {};
-			for _, feature in pairs(disco.tags) do
-				if feature.name == "feature" and feature.attr.var then
+			for feature in disco:childtags("feature") do
+				if feature.attr.var then
 					local nfeature = feature.attr.var:match("^(.*)%+notify$");
 					if nfeature then notify[nfeature] = true; end
 				end

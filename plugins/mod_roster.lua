@@ -37,7 +37,7 @@ module:hook("iq/self/jabber:iq:roster:query", function(event)
 	if stanza.attr.type == "get" then
 		local roster = st.reply(stanza);
 
-		local client_ver = tonumber(stanza.tags[1].attr.ver);
+		local client_ver = tonumber(stanza:get_first_child_attr("ver"));
 		local server_ver = tonumber(session.roster[false].version or 1);
 
 		if not (client_ver and server_ver) or client_ver ~= server_ver then
@@ -58,15 +58,16 @@ module:hook("iq/self/jabber:iq:roster:query", function(event)
 					roster:up(); -- move out from item
 				end
 			end
-			roster.tags[1].attr.ver = tostring(server_ver);
+			local query = roster:get_first_child();
+			query.attr.ver = tostring(server_ver);
 		end
 		session.send(roster);
 		session.interested = true; -- resource is interested in roster updates
 	else -- stanza.attr.type == "set"
-		local query = stanza.tags[1];
-		if #query.tags == 1 and query.tags[1].name == "item"
-				and query.tags[1].attr.xmlns == "jabber:iq:roster" and query.tags[1].attr.jid then
-			local item = query.tags[1];
+		local query = stanza:get_first_child();
+		if query:get_child_count() == 1 and query:get_first_child_clarke() == "{jabber:iq:roster}item"
+				and query:get_first_child_attr("jid") then
+			local item = query:get_first_child();
 			local from_node, from_host = jid_split(stanza.attr.from);
 			local jid = jid_prep(item.attr.jid);
 			if jid and not jid_resource(jid) then

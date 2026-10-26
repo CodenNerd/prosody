@@ -59,7 +59,7 @@ end);
 
 module:hook("iq-set/host/"..xmlns_cmd..":command", function (event)
 	local origin, stanza = event.origin, event.stanza;
-	local node = stanza.tags[1].attr.node
+	local node = stanza:get_first_child_attr("node");
 	local command = commands[node];
 	if command then
 		if not check_permissions(event, node, command, true) then

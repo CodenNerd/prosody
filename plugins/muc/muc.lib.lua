@@ -392,7 +392,7 @@ function room_mt:send_occupant_list(to_occupant, to_jid, filter)
 end
 
 function room_mt:get_disco_info(stanza)
-	local node = stanza.tags[1].attr.node;
+	local node = stanza:get_first_child_attr("node");
 	local reply = st.reply(stanza):tag("query", { xmlns = "http://jabber.org/protocol/disco#info", node = node });
 	local event_name = "muc-disco#info";
 	local event_data = { room = self, reply = reply, stanza = stanza };
@@ -892,7 +892,7 @@ function room_mt:handle_iq_to_occupant(origin, stanza)
 		end
 		stanza.attr.from, stanza.attr.to = current_nick, occupant.jid;
 		log("debug", "%s sent private iq stanza to %s (%s)", from, to, occupant.jid);
-		local iq_ns = stanza.tags[1].attr.xmlns;
+		local iq_ns = stanza:get_first_child_ns();
 		if iq_ns == 'vcard-temp' or iq_ns == "http://jabber.org/protocol/pubsub" or iq_ns == "urn:ietf:params:xml:ns:vcard-4.0" then
 			stanza.attr.to = jid_bare(stanza.attr.to);
 		end
@@ -957,13 +957,13 @@ function room_mt:get_form_layout(actor)
 end
 
 function room_mt:process_form(origin, stanza)
-	local form = stanza.tags[1]:get_child("x", "jabber:x:data");
+	local form = stanza:get_first_child():get_child("x", "jabber:x:data");
 	if form.attr.type == "cancel" then
 		origin.send(st.reply(stanza));
 	elseif form.attr.type == "submit" then
 		-- luacheck: ignore 231/errors
 		local fields, errors, present;
-		if form.tags[1] == nil then -- Instant room
+		if not form:has_child_tags() then -- Instant room
 			fields, present = {}, {};
 		else
 			-- FIXME handle form errors
@@ -1063,7 +1063,7 @@ function room_mt:handle_disco_items_get_query(origin, stanza)
 end
 
 function room_mt:handle_admin_query_set_command(origin, stanza)
-	local item = stanza.tags[1].tags[1];
+	local item = stanza:get_first_child():get_first_child();
 	if not item then
 		origin.send(st.error_reply(stanza, "cancel", "bad-request"));
 		return true;
@@ -1130,7 +1130,7 @@ end
 function room_mt:handle_admin_query_get_command(origin, stanza)
 	local actor = stanza.attr.from;
 	local affiliation = self:get_affiliation(actor);
-	local item = stanza.tags[1].tags[1];
+	local item = stanza:get_first_child():get_first_child();
 	local _aff = item.attr.affiliation;
 	local _aff_rank = valid_affiliations[_aff or "none"];
 	local _rol = item.attr.role;
@@ -1194,7 +1194,7 @@ function room_mt:handle_owner_query_set_to_room(origin, stanza)
 		return true;
 	end
 
-	local child = stanza.tags[1].tags[1];
+	local child = stanza:get_first_child():get_first_child();
 	if not child then
 		origin.send(st.error_reply(stanza, "modify", "bad-request"));
 		return true;
@@ -1372,7 +1372,7 @@ function room_mt:handle_message_to_room(origin, stanza)
 	elseif type == nil or type == "normal" then
 		local x = stanza:get_child("x", "http://jabber.org/protocol/muc#user");
 		if x then
-			local payload = x.tags[1];
+			local payload = x:get_first_child();
 			if payload == nil then --luacheck: ignore 542
 				-- fallthrough
 			elseif payload.name == "invite" and payload.attr.to then

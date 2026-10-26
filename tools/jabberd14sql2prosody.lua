@@ -562,8 +562,12 @@ function store_offline_messages(username, host, stanza)
 		local stamp = stanza:get_child("x", "jabber:x:delay");
 		if not stamp or not stamp.attr.stamp then print(2) return; end
 
-		for i=1,#stanza do if stanza[i] == stamp then table.remove(stanza, i); break; end end
-		for i=1,#stanza.tags do if stanza.tags[i] == stamp then table.remove(stanza.tags, i); break; end end
+		stanza:maptags(function (tag)
+			if tag == stamp then
+				return nil;
+			end
+			return tag;
+		end);
 
 		local parsed_stamp = datetime_parse(stamp.attr.stamp);
 		if not parsed_stamp then print(1, stamp.attr.stamp) return; end

@@ -13,7 +13,7 @@ module:hook("iq-get/bare/urn:ietf:params:xml:ns:vcard-4.0:vcard", function (even
 	local pep_service = mod_pep.get_pep_service(jid_split(stanza.attr.to) or origin.username);
 	local ok, id, item = pep_service:get_last_item("urn:xmpp:vcard4", stanza.attr.from);
 	if ok and item then
-		origin.send(st.reply(stanza):add_child(item.tags[1]));
+		origin.send(st.reply(stanza):add_child(item:get_first_child()));
 	elseif id == "item-not-found" or not id then
 		origin.send(st.error_reply(stanza, "cancel", "item-not-found"));
 	elseif id == "forbidden" then
@@ -28,7 +28,7 @@ module:hook("iq-set/self/urn:ietf:params:xml:ns:vcard-4.0:vcard", function (even
 	local origin, stanza = event.origin, event.stanza;
 
 	local vcard4 = st.stanza("item", { xmlns = "http://jabber.org/protocol/pubsub", id = "current" })
-		:add_child(stanza.tags[1]);
+		:add_child(stanza:get_first_child());
 
 	local pep_service = mod_pep.get_pep_service(origin.username);
 

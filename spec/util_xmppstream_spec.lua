@@ -75,16 +75,16 @@ describe("util.xmppstream", function()
 				assert.are.equal(#stanzas, 1);
 				local s = stanzas[1];
 				assert.are.equal(s.name, "x");
-				assert.are.equal(#s.tags, 2);
+				assert.are.equal(s:get_child_count(), 2);
 
-				assert.are.equal(s.tags[1].name, "y");
-				assert.are.equal(s.tags[1].attr.xmlns, nil);
+				assert.are.equal(s:get_first_child().name, "y");
+				assert.are.equal(s:get_first_child().attr.xmlns, nil);
 
-				assert.are.equal(s.tags[1].tags[1].name, "z");
-				assert.are.equal(s.tags[1].tags[1].attr.xmlns, "c");
+				assert.are.equal(s:get_first_child():get_first_child().name, "z");
+				assert.are.equal(s:get_first_child():get_first_child_ns(), "c");
 
-				assert.are.equal(s.tags[2].name, "z");
-				assert.are.equal(s.tags[2].attr.xmlns, "b");
+				assert.are.equal(s:get_child_n(2).name, "z");
+				assert.are.equal(s:get_child_n(2).attr.xmlns, "b");
 
 				assert.are.equal(s.namespaces, nil);
 			end);

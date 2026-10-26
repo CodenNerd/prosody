@@ -85,7 +85,7 @@ local parse_xml = (function()
 		if ok then ok, err, line, col = parser:parse(); end
 		--parser:close();
 		if ok then
-			return stanza.tags[1];
+			return stanza:get_first_child();
 		else
 			return ok, ("%s (line %d, col %d))"):format(err, line, col);
 		end

@@ -114,7 +114,7 @@ end);
 -- Handle archive queries
 module:hook("iq-set/self/"..xmlns_mam..":query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local query = stanza.tags[1];
+	local query = stanza:get_first_child();
 	local qid = query.attr.queryid;
 
 	origin.mam_requested = true;
@@ -444,7 +444,7 @@ local function message_handler(event, c2s)
 				return tag;
 			end
 		end);
-		if #clone_for_storage.tags == 0 then
+		if not clone_for_storage:has_child_tags() then
 			log("debug", "Not archiving stanza: %s (empty when stripped)", stanza:top_tag());
 			return;
 		end

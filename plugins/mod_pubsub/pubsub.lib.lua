@@ -352,8 +352,8 @@ end
 
 function _M.handle_pubsub_iq(event, service)
 	local origin, stanza = event.origin, event.stanza;
-	local pubsub_tag = stanza.tags[1];
-	local action = pubsub_tag.tags[1];
+	local pubsub_tag = stanza:get_first_child();
+	local action = pubsub_tag:get_first_child();
 	if not action then
 		return origin.send(st.error_reply(stanza, "cancel", "bad-request"));
 	end
@@ -528,7 +528,7 @@ function handlers.set_create(origin, stanza, create, service)
 	local node = create.attr.node;
 	local ok, ret, reply;
 	local config;
-	local configure = stanza.tags[1]:get_child("configure");
+	local configure = stanza:get_first_child():get_child("configure");
 	if configure then
 		local config_form = configure:get_child("x", "jabber:x:data");
 		if not config_form then
@@ -591,11 +591,11 @@ function handlers.set_subscribe(origin, stanza, subscribe, service)
 		origin.send(pubsub_error_reply(stanza, jid and "nodeid-required" or "invalid-jid"));
 		return true;
 	end
-	local options_tag, options = stanza.tags[1]:get_child("options"), nil;
+	local options_tag, options = stanza:get_first_child():get_child("options"), nil;
 	if options_tag then
 		-- FIXME form parsing errors ignored here, why?
 		local err
-		options, err = subscribe_options_form:data(options_tag.tags[1]);
+		options, err = subscribe_options_form:data(options_tag:get_first_child());
 		if err then
 			origin.send(st.error_reply(stanza, "modify", "bad-request", dataform_error_message(err)));
 			return true
@@ -701,7 +701,7 @@ function handlers.set_options(origin, stanza, options, service)
 		return true;
 	end
 	local old_subopts = ret;
-	local new_subopts, err = subscribe_options_form:data(options.tags[1], old_subopts);
+	local new_subopts, err = subscribe_options_form:data(options:get_first_child(), old_subopts);
 	if err then
 		origin.send(st.error_reply(stanza, "modify", "bad-request", dataform_error_message(err)));
 		return true;
@@ -722,7 +722,7 @@ function handlers.set_publish(origin, stanza, publish, service)
 		return true;
 	end
 	local required_config = nil;
-	local publish_options = stanza.tags[1]:get_child("publish-options");
+	local publish_options = stanza:get_first_child():get_child("publish-options");
 	if publish_options then
 		-- Ensure that the node configuration matches the values in publish-options
 		local publish_options_form = publish_options:get_child("x", "jabber:x:data");
@@ -1011,7 +1011,7 @@ local function archive_itemstore(archive, max_items, user, node)
 		local data, err;
 		if value ~= nil then
 			local publisher = value.attr.publisher;
-			local payload = value.tags[1];
+			local payload = value:get_first_child();
 			data, err = archive:append(user, key, payload, time_now(), publisher);
 		else
 			data, err = archive:delete(user, { key = key; });

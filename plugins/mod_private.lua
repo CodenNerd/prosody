@@ -15,12 +15,12 @@ module:add_feature("jabber:iq:private");
 
 module:hook("iq/self/jabber:iq:private:query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local query = stanza.tags[1];
-	if #query.tags ~= 1 then
+	local query = stanza:get_first_child();
+	if not query:has_single_child_tag() then
 		origin.send(st.error_reply(stanza, "modify", "bad-format"));
 		return true;
 	end
-	local tag = query.tags[1];
+	local tag = query:get_first_child();
 	local key = tag.name..":"..tag.attr.xmlns;
 	if stanza.attr.type == "get" then
 		local data, err = private_storage:get(origin.username, key);

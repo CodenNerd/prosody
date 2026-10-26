@@ -13,8 +13,8 @@ describe("util.xml", function()
 </x>
 ]]
 			local stanza = xml.parse(x, {allow_comments = true});
-			assert.are.equal(stanza.tags[2].attr.xmlns, "b");
-			assert.are.equal(stanza.tags[2].namespaces["a"], "b");
+			assert.are.equal(stanza:get_child_n(2).attr.xmlns, "b");
+			assert.are.equal(stanza:get_child_n(2).namespaces["a"], "b");
 		end);
 
 		it("should reject doctypes", function()

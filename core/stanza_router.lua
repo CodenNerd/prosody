@@ -36,8 +36,8 @@ local function handle_unhandled_stanza(host, origin, stanza) --luacheck: ignore 
 			end
 			return;
 		end
-		if name == "iq" and (st_type == "get" or st_type == "set") and stanza.tags[1] then
-			xmlns = stanza.tags[1].attr.xmlns or "jabber:client";
+		if name == "iq" and (st_type == "get" or st_type == "set") and stanza:has_child_tags() then
+			xmlns = stanza:get_first_child_ns() or "jabber:client";
 		end
 		log("debug", "Unhandled %s stanza: %s; xmlns=%s", origin_type, name, xmlns);
 		if origin.send then
@@ -56,7 +56,7 @@ function core_process_stanza(origin, stanza)
 
 	if origin.type == "c2s" and not stanza.attr.xmlns then
 		local name, st_type = stanza.name, stanza.attr.type;
-		if st_type == "error" and #stanza.tags == 0 then
+		if st_type == "error" and not stanza:has_child_tags() then
 			return handle_unhandled_stanza(origin.host, origin, stanza);
 		end
 		if name == "iq" then
@@ -66,7 +66,7 @@ function core_process_stanza(origin, stanza)
 			elseif not stanza.attr.id then
 				origin.send(st.error_reply(stanza, "modify", "bad-request", "Missing required 'id' attribute"));
 				return;
-			elseif (st_type == "set" or st_type == "get") and (#stanza.tags ~= 1) then
+			elseif (st_type == "set" or st_type == "get") and not stanza:has_single_child_tag() then
 				origin.send(st.error_reply(stanza, "modify", "bad-request", "Incorrect number of children for IQ stanza"));
 				return;
 			end
@@ -132,8 +132,9 @@ function core_process_stanza(origin, stanza)
 			local event;
 			if xmlns == nil then
 				if stanza.name == "iq" and (stanza.attr.type == "set" or stanza.attr.type == "get")
-					and stanza.tags[1] and stanza.tags[1].attr.xmlns then
-					event = "stanza/iq/"..stanza.tags[1].attr.xmlns..":"..stanza.tags[1].name;
+					and stanza:get_first_child_ns() then
+					local payload = stanza:get_first_child();
+					event = "stanza/iq/"..payload.attr.xmlns..":"..payload.name;
 				else
 					event = "stanza/"..stanza.name;
 				end

@@ -43,7 +43,7 @@ local function handle_vcard(event)
 	else -- stanza.attr.type == "set"
 		if not to or (is_component and event.allow_vcard_modification) then
 			local node = is_component and jid.node(stanza.attr.to) or session.username;
-			if vcards:set(node, st.preserialize(stanza.tags[1])) then
+			if vcards:set(node, st.preserialize(stanza:get_first_child())) then
 				session.send(st.reply(stanza));
 				module:fire_event("vcard-updated", event);
 			else

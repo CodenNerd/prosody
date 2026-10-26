@@ -133,7 +133,7 @@ function module.add_host(module)
 			return true;
 		end
 
-		local sid = stanza.tags[1].attr.sid;
+		local sid = stanza:get_first_child_attr("sid");
 		origin.send(st.reply(stanza):tag("query", {xmlns="http://jabber.org/protocol/bytestreams", sid=sid})
 			:tag("streamhost", {jid=host, host=proxy_address, port=("%d"):format(proxy_port)}));
 		return true;
@@ -148,7 +148,7 @@ function module.add_host(module)
 			return true;
 		end
 
-		local query = stanza.tags[1];
+		local query = stanza:get_first_child();
 		local sid = query.attr.sid;
 		local from = stanza.attr.from;
 		local to = query:get_child_text("activate");

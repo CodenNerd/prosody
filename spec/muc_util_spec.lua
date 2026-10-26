@@ -28,9 +28,9 @@ describe("muc/util", function ()
 				:tag("x", { xmlns = "http://jabber.org/protocol/muc#user" })
 					:tag("invite", { to = "user@example.com" });
 
-			assert.equal(1, #stanza.tags);
+			assert.equal(true, stanza:has_single_child_tag());
 			assert.equal(stanza, muc_util.filter_muc_x(stanza));
-			assert.equal(0, #stanza.tags);
+			assert.equal(false, stanza:has_child_tags());
 		end);
 
 		it("correctly filters muc#user on a cloned stanza", function ()
@@ -38,10 +38,10 @@ describe("muc/util", function ()
 				:tag("x", { xmlns = "http://jabber.org/protocol/muc#user" })
 					:tag("invite", { to = "user@example.com" });
 
-			assert.equal(1, #stanza.tags);
+			assert.equal(true, stanza:has_single_child_tag());
 			local filtered = muc_util.filter_muc_x(st.clone(stanza));
-			assert.equal(1, #stanza.tags);
-			assert.equal(0, #filtered.tags);
+			assert.equal(true, stanza:has_single_child_tag());
+			assert.equal(false, filtered:has_child_tags());
 		end);
 	end);
 end);

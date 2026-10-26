@@ -155,7 +155,7 @@ local function handle_register_iq(room, origin, stanza)
 		end
 		reply:add_child(registration_form:form());
 	else -- type == set -- handle registration form
-		local query = stanza.tags[1];
+		local query = stanza:get_first_child();
 		if query:get_child("remove") then
 			-- Remove "member" affiliation, but preserve if any other
 			local new_affiliation = affiliation ~= "member" and affiliation;

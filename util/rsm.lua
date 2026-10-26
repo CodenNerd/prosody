@@ -104,7 +104,7 @@ end
 
 local function get(st)
 	local set = st:get_child("set", xmlns_rsm);
-	if set and #set.tags > 0 then
+	if set and set:has_child_tags() then
 		return parse(set);
 	end
 end

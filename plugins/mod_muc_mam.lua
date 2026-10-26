@@ -133,7 +133,7 @@ module:hook("iq-set/bare/"..xmlns_mam..":query", function(event)
 	local room_jid = stanza.attr.to;
 	local room_node = jid_split(room_jid);
 	local orig_from = stanza.attr.from;
-	local query = stanza.tags[1];
+	local query = stanza:get_first_child();
 
 	local room = get_room_from_jid(room_jid);
 	if not room then

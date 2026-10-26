@@ -78,7 +78,7 @@ function module.restore(data)
 end
 
 function is_item_stanza(item)
-	return st.is_stanza(item) and item.attr.xmlns == xmlns_pubsub and item.name == "item" and #item.tags == 1;
+	return st.is_stanza(item) and item.attr.xmlns == xmlns_pubsub and item.name == "item" and item:has_single_child_tag();
 end
 
 function check_node_config(node, actor, new_config) -- luacheck: ignore 212/node 212/actor
@@ -430,9 +430,9 @@ module:hook("iq-result/bare/disco", function(event)
 		user_bare = jid_join(username, host);
 	end
 	local contact = stanza.attr.from;
-	local ver = calculate_hash(disco.tags); -- calculate hash
+	local ver = calculate_hash(disco); -- calculate hash
 	local notify = set_new();
-	for _, feature in pairs(disco.tags) do
+	for feature in disco:childtags() do
 		if feature.name == "feature" and feature.attr.var then
 			local nfeature = feature.attr.var:match("^(.*)%+notify$");
 			if nfeature then notify:add(nfeature); end

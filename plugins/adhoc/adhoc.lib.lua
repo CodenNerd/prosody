@@ -37,7 +37,7 @@ function _M.new(name, node, handler, permission)
 end
 
 function _M.handle_cmd(command, origin, stanza)
-	local cmdtag = stanza.tags[1]
+	local cmdtag = stanza:get_first_child();
 	local sessionid = cmdtag.attr.sessionid or uuid.generate();
 	local dataIn = {
 		origin = origin;

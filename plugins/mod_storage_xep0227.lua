@@ -51,9 +51,9 @@ local function default_set_user_xml(self, user, host, xml) --luacheck: ignore 21
 end
 local function getUserElement(xml)
 	if xml and xml.name == "server-data" then
-		local host = xml.tags[1];
+		local host = xml:get_first_child();
 		if host and host.name == "host" then
-			local user = host.tags[1];
+			local user = host:get_first_child();
 			if user and user.name == "user" then
 				return user;
 			end
@@ -178,7 +178,7 @@ handlers.private = {
 			local private = user:get_child("query", "jabber:iq:private");
 			if private then
 				local r = {};
-				for _, tag in ipairs(private.tags) do
+				for tag in private:childtags() do
 					r[tag.name..":"..tag.attr.xmlns] = st.preserialize(tag);
 				end
 				return r;
@@ -461,11 +461,11 @@ handlers.pep_ = {
 		for item_el in node_items_el:childtags("item") do
 			if query and query.key then
 				if item_el.attr.id == query.key then
-					table.insert(results, { item_el.attr.id, item_el.tags[1], 0, user_jid });
+					table.insert(results, { item_el.attr.id, item_el:get_first_child(), 0, user_jid });
 					break;
 				end
 			else
-				table.insert(results, { item_el.attr.id, item_el.tags[1], 0, user_jid });
+				table.insert(results, { item_el.attr.id, item_el:get_first_child(), 0, user_jid });
 			end
 			if query and query.limit and #results >= query.limit then
 				break;

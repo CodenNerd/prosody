@@ -100,7 +100,7 @@ module:hook("item-removed/extension", clear_disco_cache);
 -- Handle disco requests to the server
 module:hook("iq-get/host/http://jabber.org/protocol/disco#info:query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local node = stanza.tags[1].attr.node;
+	local node = stanza:get_first_child_attr("node");
 	if node and node ~= "" and node ~= "http://prosody.im#"..get_server_caps_hash() then
 		local reply = st.reply(stanza):tag('query', {xmlns='http://jabber.org/protocol/disco#info', node=node});
 		local node_event = { origin = origin, stanza = stanza, reply = reply, node = node, exists = false};
@@ -122,7 +122,7 @@ end);
 
 module:hook("iq-get/host/http://jabber.org/protocol/disco#items:query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local node = stanza.tags[1].attr.node;
+	local node = stanza:get_first_child_attr("node");
 	if node and node ~= "" then
 		local reply = st.reply(stanza):tag('query', {xmlns='http://jabber.org/protocol/disco#items', node=node});
 		local node_event = { origin = origin, stanza = stanza, reply = reply, node = node, exists = false};
@@ -167,7 +167,7 @@ module:default_permission("prosody:admin", ":be-discovered-admin");
 if module:get_host_type() ~= "local" then	return end -- skip for components
 module:hook("iq-get/bare/http://jabber.org/protocol/disco#info:query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local node = stanza.tags[1].attr.node;
+	local node = stanza:get_first_child_attr("node");
 	local username = jid_split(stanza.attr.to) or origin.username;
 	local target_is_admin = module:may(":be-discovered-admin", stanza.attr.to or origin.full_jid);
 	if not stanza.attr.to or (expose_admins and target_is_admin) or is_contact_subscribed(username, module.host, jid_bare(stanza.attr.from)) then
@@ -205,7 +205,7 @@ end);
 
 module:hook("iq-get/bare/http://jabber.org/protocol/disco#items:query", function(event)
 	local origin, stanza = event.origin, event.stanza;
-	local node = stanza.tags[1].attr.node;
+	local node = stanza:get_first_child_attr("node");
 	local username = jid_split(stanza.attr.to) or origin.username;
 	if not stanza.attr.to or is_contact_subscribed(username, module.host, jid_bare(stanza.attr.from)) then
 		if node and node ~= "" then

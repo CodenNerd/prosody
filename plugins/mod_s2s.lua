@@ -601,7 +601,7 @@ function session_events.streamopened(session, event)
 				module:fire_event("s2s-stream-features-legacy", { origin = session, features = features });
 			end
 
-			if ( session.type == "s2sin" or session.type == "s2sout" ) or features.tags[1] then
+			if ( session.type == "s2sin" or session.type == "s2sout" ) or features:get_first_child() then
 				if session.stanza_size_limit or advertised_idle_timeout then
 					features:reset();
 					local limits = features:tag("limits", { xmlns = "urn:xmpp:stream-limits:0" });

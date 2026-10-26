@@ -164,7 +164,7 @@ module:hook("account-disco-info", account_dico_info);
 -- http://xmpp.org/extensions/xep-0357.html#enabling
 local function push_enable(event)
 	local origin, stanza = event.origin, event.stanza;
-	local enable = stanza.tags[1];
+	local enable = stanza:get_first_child();
 	origin.log("debug", "Attempting to enable push notifications");
 	-- MUST contain a 'jid' attribute of the XMPP Push Service being enabled
 	local push_jid = enable.attr.jid;
@@ -222,8 +222,9 @@ module:hook("iq-set/self/"..xmlns_push..":enable", push_enable);
 -- http://xmpp.org/extensions/xep-0357.html#disabling
 local function push_disable(event)
 	local origin, stanza = event.origin, event.stanza;
-	local push_jid = stanza.tags[1].attr.jid; -- MUST include a 'jid' attribute
-	local push_node = stanza.tags[1].attr.node; -- A 'node' attribute MAY be included
+	local payload = stanza:get_first_child();
+	local push_jid = payload.attr.jid; -- MUST include a 'jid' attribute
+	local push_node = payload.attr.node; -- A 'node' attribute MAY be included
 	if not push_jid then
 		origin.send(st.error_reply(stanza, "modify", "bad-request", "Missing jid"));
 		return true;

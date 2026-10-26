@@ -42,7 +42,7 @@ module:hook("iq-get/bare/vcard-temp:vCard", function (event)
 
 	local vcard_temp = st.stanza("vCard", { xmlns = "vcard-temp" });
 	if ok and vcard4_item then
-		local vcard4 = vcard4_item.tags[1];
+		local vcard4 = vcard4_item:get_first_child();
 
 		local fn = vcard4:get_child("fn");
 		vcard_temp:text_tag("FN", fn and fn:get_child_text("text"));
@@ -129,7 +129,7 @@ module:hook("iq-get/bare/vcard-temp:vCard", function (event)
 	local ok, avatar_hash, meta = pep_service:get_last_item("urn:xmpp:avatar:metadata", stanza.attr.from);
 	if ok and avatar_hash then
 
-		local info = meta.tags[1]:get_child("info");
+		local info = meta:get_first_child():get_child("info");
 		if info then
 			vcard_temp:tag("PHOTO");
 
@@ -143,7 +143,7 @@ module:hook("iq-get/bare/vcard-temp:vCard", function (event)
 				local data_ok, avatar_data = pep_service:get_items("urn:xmpp:avatar:data", stanza.attr.from, { info.attr.id });
 				if data_ok and avatar_data and avatar_data[info.attr.id]  then
 					local data = avatar_data[info.attr.id];
-					vcard_temp:text_tag("BINVAL", data.tags[1]:get_text());
+					vcard_temp:text_tag("BINVAL", data:get_first_child_text());
 				end
 			end
 			vcard_temp:up();
@@ -298,7 +298,7 @@ module:hook("iq-set/self/vcard-temp:vCard", function (event)
 	local origin, stanza = event.origin, event.stanza;
 	local pep_service = mod_pep.get_pep_service(origin.username);
 
-	local vcard_temp = stanza.tags[1];
+	local vcard_temp = stanza:get_first_child();
 
 	local ok, err = save_to_pep(pep_service, origin.full_jid, vcard_to_pep(vcard_temp));
 	if ok then

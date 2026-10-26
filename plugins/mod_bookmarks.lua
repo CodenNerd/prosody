@@ -42,9 +42,10 @@ local function generate_legacy_storage(items)
 		local item = items[item_id];
 		local bookmark = item:get_child("conference", namespace);
 		if not bookmark then
-			module:log("warn", "Invalid bookmark published: expected {%s}conference, got {%s}%s", namespace,
-
-				item.tags[1] and item.tags[1].attr.xmlns, item.tags[1] and item.tags[1].name);
+			module:log("warn", "Invalid bookmark published: expected {%s}conference, got %s",
+				namespace,
+				item:get_first_child_clarke() or "[payload missing]"
+			);
 		end
 		local conference = st.stanza("conference", {
 			jid = item.attr.id,
@@ -163,7 +164,7 @@ end
 local function publish_to_pep(jid, bookmarks, synchronise)
 	local service = mod_pep.get_pep_service(jid_split(jid));
 
-	if #bookmarks.tags == 0 then
+	if not bookmarks:has_child_tags() then
 		if synchronise then
 			-- If we set zero legacy bookmarks, purge the bookmarks 2 node.
 			module:log("debug", "No bookmark in the set, purging instead.");

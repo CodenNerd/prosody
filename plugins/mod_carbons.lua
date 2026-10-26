@@ -18,9 +18,9 @@ end
 
 local function toggle_carbons(event)
 	local origin, stanza = event.origin, event.stanza;
-	local state = stanza.tags[1].name;
+	local state = stanza:get_first_child().name;
 	module:log("debug", "%s %sd carbons", origin.full_jid, state);
-	origin.want_carbons = state == "enable" and stanza.tags[1].attr.xmlns;
+	origin.want_carbons = state == "enable" and stanza:get_first_child_ns();
 	origin.send(st.reply(stanza));
 	return true;
 end

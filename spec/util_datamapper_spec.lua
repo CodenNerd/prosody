@@ -219,13 +219,13 @@ describe("util.datamapper", function()
 			assert.same(x:get_child("delay", "urn:xmpp:delay").attr, u:get_child("delay", "urn:xmpp:delay").attr);
 			assert.same(x:get_child("origin-id", "urn:xmpp:sid:0").attr, u:get_child("origin-id", "urn:xmpp:sid:0").attr);
 			assert.same(x:get_child("reactions", "urn:xmpp:reactions:0").attr, u:get_child("reactions", "urn:xmpp:reactions:0").attr);
-			assert.same(2, #u:get_child("reactions", "urn:xmpp:reactions:0").tags);
-			for _, tag in ipairs(x.tags) do
+			assert.same(2, u:get_child("reactions", "urn:xmpp:reactions:0"):get_child_count());
+			for tag in x:childtags() do
 				if tag.name ~= "UNRELATED" then
 					assert.truthy(u:get_child(tag.name, tag.attr.xmlns) or u:get_child(tag.name), tag:top_tag())
 				end
 			end
-			assert.equal(#x.tags-1, #u.tags)
+			assert.equal(x:get_child_count() - 1, u:get_child_count())
 
 		end);
 

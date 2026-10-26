@@ -373,7 +373,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert.equal(test_data[count][3], when);
 						end
 						assert.equal(#test_data, count);
@@ -392,7 +392,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert.equal(test_time-3, when);
 						end
 						assert.equal(1, count);
@@ -411,7 +411,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert(test_time >= when);
 						end
 						assert.equal(4, count);
@@ -430,7 +430,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert(when >= test_time, ("%d >= %d"):format(when, test_time));
 						end
 						assert.equal(#test_data - 3, count);
@@ -449,7 +449,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert(when >= test_time-5, ("%d >= %d"):format(when, test_time-5));
 						end
 						assert.equal(#test_data, count);
@@ -468,7 +468,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert(when >= test_time+5, ("%d >= %d"):format(when, test_time+5));
 						end
 						assert.equal(0, count);
@@ -488,7 +488,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							assert(when >= test_time-1, ("%d >= %d"):format(when, test_time));
 							assert(when <= test_time+2, ("%d <= %d"):format(when, test_time+1));
 						end
@@ -509,7 +509,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 						end
 						assert.equal(5, count);
 					end);
@@ -528,7 +528,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 						end
 						assert.equal(3, count);
 					end);
@@ -548,7 +548,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 						end
 						assert.equal(2, count);
 					end);
@@ -570,7 +570,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 						end
 						assert.equal(2, count);
 
@@ -592,7 +592,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 							i = i - 1;
 						end
 
@@ -616,7 +616,7 @@ describe("storagemanager", function ()
 							assert(st.is_stanza(item));
 							assert.equal("test", item.name);
 							assert.equal("urn:example:foo", item.attr.xmlns);
-							assert.equal(2, #item.tags);
+							assert.equal(2, item:get_child_count());
 						end
 						assert.equal(2, count);
 					end);

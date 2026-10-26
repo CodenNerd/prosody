@@ -147,7 +147,7 @@ function session_events.streamopened(session, event)
 
 	local features = st.stanza("stream:features");
 	hosts[session.host].events.fire_event("stream-features", { origin = session, features = features, stream = attr });
-	if features.tags[1] or session.full_jid then
+	if features:has_child_tags() or session.full_jid then
 		if session.stanza_size_limit or advertised_idle_timeout then
 			features:reset();
 			local limits = features:tag("limits", { xmlns = "urn:xmpp:stream-limits:0" });

@@ -8,7 +8,6 @@
 
 module:set_global();
 
-local t_concat = table.concat;
 local tostring, type = tostring, type;
 local xpcall = require "prosody.util.xpcall".xpcall;
 local traceback = debug.traceback;
@@ -64,7 +63,7 @@ function module.add_host(module)
 
 		if session.type ~= "component_unauthed" then return; end
 
-		if (not session.host) or #stanza.tags > 0 then
+		if (not session.host) or stanza:has_child_tags() then
 			(session.log or log)("warn", "Invalid component handshake for host: %s", session.host);
 			session:close("not-authorized");
 			return true;
@@ -77,7 +76,7 @@ function module.add_host(module)
 			return true;
 		end
 
-		local supplied_token = t_concat(stanza);
+		local supplied_token = stanza:get_text();
 		local calculated_token = sha1(session.streamid..secret, true);
 		if supplied_token:lower() ~= calculated_token:lower() then
 			module:log("info", "Component authentication failed for %s", session.host);
@@ -119,7 +118,7 @@ function module.add_host(module)
 			send(stanza);
 		else
 			if stanza.name == "iq" and stanza.attr.type == "get" and stanza.attr.to == module.host then
-				local query = stanza.tags[1];
+				local query = stanza:get_first_child();
 				local node = query.attr.node;
 				if query.name == "query" and query.attr.xmlns == "http://jabber.org/protocol/disco#info" and (not node or node == "") then
 					local name = module:get_option_string("name");

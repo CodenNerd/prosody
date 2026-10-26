@@ -164,7 +164,7 @@ end
 
 local function handle_services(event)
 	local origin, stanza = event.origin, event.stanza;
-	local action = stanza.tags[1];
+	local action = stanza:get_first_child();
 
 	local user_bare = jid.bare(stanza.attr.from);
 	local user_host = jid.host(user_bare);
@@ -197,7 +197,7 @@ end
 
 local function handle_credentials(event)
 	local origin, stanza = event.origin, event.stanza;
-	local action = stanza.tags[1];
+	local action = stanza:get_first_child();
 
 	if origin.type ~= "c2s" then
 		origin.send(st.error_reply(stanza, "auth", "forbidden"));

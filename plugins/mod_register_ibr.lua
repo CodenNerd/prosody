@@ -133,7 +133,7 @@ module:hook("stanza/iq/jabber:iq:register:query", function(event)
 		return true;
 	end
 
-	local query = stanza.tags[1];
+	local query = stanza:get_first_child();
 	if stanza.attr.type == "get" then
 		local reply = st.reply(stanza);
 		reply:add_child(registration_query);
@@ -142,7 +142,7 @@ module:hook("stanza/iq/jabber:iq:register:query", function(event)
 	end
 
 	-- stanza.attr.type == "set"
-	if query.tags[1] and query.tags[1].name == "remove" then
+	if query:get_first_child_clarke() == "{jabber:iq:register}remove" then
 		session.send(st.error_reply(stanza, "auth", "registration-required"));
 		return true;
 	end

@@ -34,7 +34,7 @@ local function handle_registration_stanza(event)
 	local session, stanza = event.origin, event.stanza;
 	local log = session.log or module._log;
 
-	local query = stanza.tags[1];
+	local query = stanza:get_first_child();
 	if stanza.attr.type == "get" then
 		local reply = st.reply(stanza);
 		reply:tag("query", {xmlns = "jabber:iq:register"})
@@ -43,7 +43,7 @@ local function handle_registration_stanza(event)
 			:tag("password"):up();
 		session.send(reply);
 	else -- stanza.attr.type == "set"
-		if query.tags[1] and query.tags[1].name == "remove" then
+		if query:get_first_child_clarke() == "{jabber:iq:register}remove" then
 			local username, host = session.username, session.host;
 
 			if host ~= module.host then -- Sanity check for safety
