@@ -101,7 +101,8 @@ end
 local function get_caps_hash_from_presence(stanza, current)
 	local t = stanza.attr.type;
 	if not t then
-		for child in stanza:childtags("c", "http://jabber.org/protocol/caps") do
+		local child = stanza:get_child("c", "http://jabber.org/protocol/caps");
+		if child then
 			local attr = child.attr;
 			if attr.hash then -- new caps
 				if attr.hash == 'sha-1' and attr.node and attr.ver then return attr.ver, attr.node.."#"..attr.ver; end
