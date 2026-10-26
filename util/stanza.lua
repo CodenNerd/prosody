@@ -162,8 +162,8 @@ function stanza_mt:remove_children(name, xmlns)
 end
 
 function stanza_mt:has_child_tags()
-	for child in self:children() do
-		if child.name then
+	for i = 1, #self do
+		if self[i].name then
 			return true;
 		end
 	end
@@ -219,32 +219,36 @@ end
 
 function stanza_mt:get_child_count()
 	local n_tags = 0;
-	for _ in self:all_tags() do
-		n_tags = n_tags + 1;
+	for i = 1, #self do
+		if self[i].name then
+			n_tags = n_tags + 1;
+		end
 	end
 	return n_tags;
 end
 
 function stanza_mt:get_child_n(n)
-	local n_tags = 0;
-	for child in self:all_tags() do
-		n_tags = n_tags + 1;
-		if n_tags == n then
-			return child;
+	for i = 1, #self do
+		local child = self[i];
+		if child.name then
+			n = n - 1;
+			if n == 0 then
+				return child;
+			end
 		end
 	end
 end
 
 function stanza_mt:get_child(name, xmlns)
-	for child in self:all_tags() do
-		if (not name or child.name == name)
-			and ((not xmlns and self.attr.xmlns == child.attr.xmlns)
+	local own_xmlns = not xmlns and self.attr.xmlns;
+	for i = 1, #self do
+		local child = self[i];
+		if child.name and (not name or child.name == name)
+			and ((not xmlns and own_xmlns == child.attr.xmlns)
 				or child.attr.xmlns == xmlns) then
-
 			return child;
 		end
 	end
-	return nil;
 end
 
 function stanza_mt:get_child_text(name, xmlns)
@@ -264,17 +268,21 @@ function stanza_mt:get_child_attr(name, xmlns, attr)
 end
 
 function stanza_mt:child_with_name(name)
-	for child in self:all_tags() do
-		if child.name == name then return child; end
+	for i = 1, #self do
+		local child = self[i];
+		if child.name == name then
+			return child;
+		end
 	end
-	return nil;
 end
 
 function stanza_mt:child_with_ns(ns)
-	for child in self:all_tags() do
-		if child.attr.xmlns == ns then return child; end
+	for i = 1, #self do
+		local child = self[i];
+		if child.name and child.attr.xmlns == ns then
+			return child;
+		end
 	end
-	return nil;
 end
 
 function stanza_mt:get_child_with_attr(name, xmlns, attr_name, attr_value, normalize)
@@ -458,10 +466,12 @@ function stanza_mt.top_tag(t)
 end
 
 function stanza_mt.get_text(t)
-	if not t:has_child_tags() then
-		return t_concat(t);
+	for i = 1, #t do
+		if t[i].name then
+			return nil;
+		end
 	end
-	return nil;
+	return t_concat(t);
 end
 
 function stanza_mt.get_error(stanza)
