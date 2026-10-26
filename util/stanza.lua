@@ -162,6 +162,53 @@ function stanza_mt:remove_children(name, xmlns)
 	end);
 end
 
+function stanza_mt:has_child_tags()
+	return not not self.tags[1];
+end
+
+function stanza_mt:has_single_child_tag()
+	return #self.tags == 1;
+end
+
+function stanza_mt:get_first_child()
+	return self.tags[1];
+end
+
+-- Prefer this for xmlns, for future-proof code
+function stanza_mt:get_first_child_ns()
+	local child = self.tags[1];
+	return child and child.attr.xmlns or nil;
+end
+
+function stanza_mt:get_first_child_attr(attr_name)
+	local child = self.tags[1];
+	return child and child.attr[attr_name] or nil;
+end
+
+function stanza_mt:get_first_child_clarke()
+	local child = self.tags[1];
+	if not child then
+		return nil;
+	end
+	return ("{%s}%s"):format(child.attr.xmlns, child.name);
+end
+
+function stanza_mt:get_first_child_text()
+	local tag = self.tags[1];
+	if tag then
+		return tag:get_text();
+	end
+	return nil;
+end
+
+function stanza_mt:get_child_count()
+	return #self.tags;
+end
+
+function stanza_mt:get_child_n(n)
+	return self.tags[n];
+end
+
 function stanza_mt:get_child(name, xmlns)
 	for _, child in ipairs(self.tags) do
 		if (not name or child.name == name)
