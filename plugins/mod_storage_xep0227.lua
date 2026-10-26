@@ -1,5 +1,5 @@
 
-local ipairs, pairs = ipairs, pairs;
+local pairs = pairs;
 local setmetatable = setmetatable;
 local tostring = tostring;
 local next, unpack = next, table.unpack;
