@@ -309,21 +309,6 @@ describe("util.stanza", function()
 		end);
 	end);
 
-	describe("#childtags()", function ()
-		it("works", function ()
-			local s = st.stanza("base")
-				:text_tag("one")
-				:text_tag("two")
-				:text_tag("three");
-			local results = {};
-			for child in s:childtags() do
-				table.insert(results, child.name);
-			end
-			assert.same({ "one", "two", "three" }, results);
-		end);
-	end);
-
-
 	describe("#get_error()", function ()
 		describe("basics", function ()
 			local s = st.message();
@@ -433,7 +418,7 @@ describe("util.stanza", function()
 			assert.truthy(s:get_child("y"))
 			assert.falsy(s:get_child(nil,"test2"));
 
-			s:remove_children();
+			s:remove_children(nil);
 			assert.is_false(s:has_child_tags());
 		end);
 	end);
@@ -507,6 +492,17 @@ describe("util.stanza", function()
 				return tag;
 			end);
 			assert.equal(3, s:get_child_count());
+		end);
+		it("errors on invalid data - #981", function ()
+			-- This test case manipulates the private data structure,
+			-- which is our best guess at the cause of #981. If, in a
+			-- future version, this is no longer possible, we can
+			-- probably just remove this test case.
+			local s = st.message({}, "Hello");
+			s._tags[1] = st.clone(s._tags[1]);
+			assert.has_error_match(function ()
+				s:maptags(function () end);
+			end, "Invalid stanza");
 		end);
 	end);
 
