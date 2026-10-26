@@ -84,7 +84,7 @@ end
 local function new_stanza(name, attr, namespaces)
 	check_name(name, "tag");
 	check_attr(attr);
-	local stanza = { name = name, attr = attr or {}, namespaces = namespaces, _tags = {} };
+	local stanza = { name = name, attr = attr or {}, namespaces = namespaces };
 	return setmetatable(stanza, stanza_mt);
 end
 
@@ -138,7 +138,6 @@ end
 
 function stanza_mt:add_direct_child(child)
 	if is_stanza(child) then
-		t_insert(self._tags, child);
 		t_insert(self, child);
 	else
 		check_text(child, "text");
@@ -163,30 +162,35 @@ function stanza_mt:remove_children(name, xmlns)
 end
 
 function stanza_mt:has_child_tags()
-	return not not self._tags[1];
+	for child in self:children() do
+		if child.name then
+			return true;
+		end
+	end
+	return false;
 end
 
 function stanza_mt:has_single_child_tag()
-	return #self._tags == 1;
+	return self:get_child_count() == 1;
 end
 
 function stanza_mt:get_first_child()
-	return self._tags[1];
+	return self:get_child_n(1);
 end
 
 -- Prefer this for xmlns, for future-proof code
 function stanza_mt:get_first_child_ns()
-	local child = self._tags[1];
+	local child = self:get_child_n(1);
 	return child and child.attr.xmlns or nil;
 end
 
 function stanza_mt:get_first_child_attr(attr_name)
-	local child = self._tags[1];
+	local child = self:get_child_n(1);
 	return child and child.attr[attr_name] or nil;
 end
 
 function stanza_mt:get_first_child_clarke()
-	local child = self._tags[1];
+	local child = self:get_child_n(1);
 	if not child then
 		return nil;
 	end
@@ -194,23 +198,45 @@ function stanza_mt:get_first_child_clarke()
 end
 
 function stanza_mt:get_first_child_text()
-	local tag = self._tags[1];
+	local tag = self:get_child_n(1);
 	if tag then
 		return tag:get_text();
 	end
 	return nil;
 end
 
+-- Iterate over all child elements, regardless of namespace
+function stanza_mt:all_tags()
+	local i, n = 0, #self;
+	return function ()
+		while i < n do
+			i = i + 1;
+			local v = self[i];
+			if v.name then return v; end
+		end
+	end;
+end
+
 function stanza_mt:get_child_count()
-	return #self._tags;
+	local n_tags = 0;
+	for _ in self:all_tags() do
+		n_tags = n_tags + 1;
+	end
+	return n_tags;
 end
 
 function stanza_mt:get_child_n(n)
-	return self._tags[n];
+	local n_tags = 0;
+	for child in self:all_tags() do
+		n_tags = n_tags + 1;
+		if n_tags == n then
+			return child;
+		end
+	end
 end
 
 function stanza_mt:get_child(name, xmlns)
-	for _, child in ipairs(self._tags) do
+	for child in self:all_tags() do
 		if (not name or child.name == name)
 			and ((not xmlns and self.attr.xmlns == child.attr.xmlns)
 				or child.attr.xmlns == xmlns) then
@@ -238,14 +264,14 @@ function stanza_mt:get_child_attr(name, xmlns, attr)
 end
 
 function stanza_mt:child_with_name(name)
-	for _, child in ipairs(self._tags) do
+	for child in self:all_tags() do
 		if child.name == name then return child; end
 	end
 	return nil;
 end
 
 function stanza_mt:child_with_ns(ns)
-	for _, child in ipairs(self._tags) do
+	for child in self:all_tags() do
 		if child.attr.xmlns == ns then return child; end
 	end
 	return nil;
@@ -269,14 +295,13 @@ function stanza_mt:children()
 end
 
 function stanza_mt:childtags(name, xmlns)
-	local tags = self._tags;
-	local start_i, max_i = 1, #tags;
+	local start_i, max_i = 1, #self;
 	return function ()
 		for i = start_i, max_i do
-			local v = tags[i];
-			if (not name or v.name == name)
+			local v = self[i];
+			if v.name and ((not name or v.name == name)
 			and ((not xmlns and self.attr.xmlns == v.attr.xmlns)
-				or v.attr.xmlns == xmlns) then
+				or v.attr.xmlns == xmlns)) then
 				start_i = i+1;
 				return v;
 			end
@@ -285,33 +310,21 @@ function stanza_mt:childtags(name, xmlns)
 end
 
 function stanza_mt:maptags(callback)
-	local tags, curr_tag = self._tags, 1;
-	local n_children, n_tags = #self, #tags;
-	local max_iterations = n_children + 1;
+	local curr_child = 1;
+	local n_children = #self;
 
-	local i = 1;
-	while curr_tag <= n_tags and n_tags > 0 do
-		if self[i] == tags[curr_tag] then
-			local ret = callback(self[i]);
+	while curr_child <= n_children and n_children > 0 do
+		if self[curr_child].name then
+			local ret = callback(self[curr_child]);
 			if ret == nil then
-				t_remove(self, i);
-				t_remove(tags, curr_tag);
+				t_remove(self, curr_child);
+				curr_child = curr_child - 1;
 				n_children = n_children - 1;
-				n_tags = n_tags - 1;
-				i = i - 1;
-				curr_tag = curr_tag - 1;
 			else
-				self[i] = ret;
-				tags[curr_tag] = ret;
+				self[curr_child] = ret;
 			end
-			curr_tag = curr_tag + 1;
 		end
-		i = i + 1;
-		if i > max_iterations then
-			-- COMPAT: Hopefully temporary guard against #981 while we
-			-- figure out the root cause
-			error("Invalid stanza state! Please report this error.");
-		end
+		curr_child = curr_child + 1;
 	end
 	return self;
 end
@@ -376,23 +389,19 @@ local function _clone(stanza, only_top)
 		namespaces = {};
 		for k,v in pairs(old_namespaces) do namespaces[k] = v; end
 	end
-	local tags, new;
+	local new;
 	if only_top then
-		tags = {};
-		new = { name = stanza.name, attr = attr, namespaces = namespaces, _tags = tags };
+		new = { name = stanza.name, attr = attr, namespaces = namespaces };
 	else
-		tags = t_create(#stanza._tags, 0);
 		new = t_create(#stanza, 4);
 		new.name = stanza.name;
 		new.attr = attr;
 		new.namespaces = namespaces;
-		new._tags = tags;
 	end
 
 	setmetatable(new, stanza_mt);
 	if not only_top then
 		t_move(stanza, 1, #stanza, 1, new);
-		t_move(stanza._tags, 1, #stanza._tags, 1, tags);
 		new:maptags(_clone);
 	end
 	return new;
@@ -449,7 +458,7 @@ function stanza_mt.top_tag(t)
 end
 
 function stanza_mt.get_text(t)
-	if #t._tags == 0 then
+	if not t:has_child_tags() then
 		return t_concat(t);
 	end
 	return nil;
@@ -464,7 +473,7 @@ function stanza_mt.get_error(stanza)
 	end
 	error_type = error_tag.attr.type;
 
-	for _, child in ipairs(error_tag._tags) do
+	for child in error_tag:all_tags() do
 		if child.attr.xmlns == xmlns_stanzas then
 			if not text and child.name == "text" then
 				text = child:get_text();
