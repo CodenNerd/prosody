@@ -2,6 +2,14 @@
 local st = require "util.stanza";
 local errors = require "util.error";
 
+local function child_names(s)
+	local names = {};
+	for tag in s:childtags() do
+		names[#names+1] = tag.name;
+	end
+	return names;
+end
+
 describe("util.stanza", function()
 	describe("#preserialize()", function()
 		it("should work", function()
@@ -12,7 +20,7 @@ describe("util.stanza", function()
 			assert.is_string(stanza2.name, "Preserialized stanza has a name field");
 			assert.equal(stanza.name, stanza2.name, "Preserialized stanza has same name as the input stanza");
 			assert.same(stanza.attr, stanza2.attr, "Preserialized stanza same attr table as input stanza");
-			assert.is_nil(stanza2.tags, "Preserialized stanza has no tag list");
+			assert.is_nil(stanza2._tags, "Preserialized stanza has no tag list");
 			assert.is_nil(stanza2.last_add, "Preserialized stanza has no last_add marker");
 			assert.is_table(stanza2[1], "Preserialized child element preserved");
 			assert.equal("body", stanza2[1].name, "Preserialized child element name preserved");
@@ -29,9 +37,7 @@ describe("util.stanza", function()
 			assert.is_string(stanza2.name, "Deserialized stanza has a name field");
 			assert.equal(stanza.name, stanza2.name, "Deserialized stanza has same name as the input table");
 			assert.same(stanza.attr, stanza2.attr, "Deserialized stanza same attr table as input table");
-			assert.is_table(stanza2.tags, "Deserialized stanza has tag list");
-			assert.is_table(stanza2[1], "Deserialized child element preserved");
-			assert.equal("body", stanza2[1].name, "Deserialized child element name preserved");
+			assert.equal("body", stanza2:get_first_child().name, "Deserialized child element preserved");
 		end);
 	end);
 
@@ -46,32 +52,30 @@ describe("util.stanza", function()
 			assert.are.equal(s1.name, "s1");
 			assert.are.equal(s1.attr.xmlns, nil);
 			assert.are.equal(#s1, 0);
-			assert.are.equal(#s1.tags, 0);
+			assert.are.equal(s1:get_child_count(), 0);
 
 			s1:tag("child1");
-			assert.are.equal(#s1.tags, 1);
-			assert.are.equal(s1.tags[1].name, "child1");
+			assert.are.equal(s1:get_child_count(), 1);
+			assert.are.equal(s1:get_first_child().name, "child1");
 
 			s1:tag("grandchild1"):up();
-			assert.are.equal(#s1.tags, 1);
-			assert.are.equal(s1.tags[1].name, "child1");
-			assert.are.equal(#s1.tags[1], 1);
-			assert.are.equal(s1.tags[1][1].name, "grandchild1");
+			assert.are.equal(s1:get_child_count(), 1);
+			assert.are.equal(s1:get_first_child().name, "child1");
+			assert.are.equal(#s1:get_first_child(), 1);
+			assert.are.equal(s1:get_first_child():get_first_child().name, "grandchild1");
 
 			s1:up():tag("child2");
-			assert.are.equal(#s1.tags, 2, tostring(s1));
-			assert.are.equal(s1.tags[1].name, "child1");
-			assert.are.equal(s1.tags[2].name, "child2");
-			assert.are.equal(#s1.tags[1], 1);
-			assert.are.equal(s1.tags[1][1].name, "grandchild1");
+			assert.are.equal(s1:get_child_count(), 2, tostring(s1));
+			assert.are.same({ "child1", "child2" }, child_names(s1));
+			assert.are.equal(#s1:get_first_child(), 1);
+			assert.are.equal(s1:get_first_child():get_first_child().name, "grandchild1");
 
 			s1:up():text("Hello world");
-			assert.are.equal(#s1.tags, 2);
+			assert.are.equal(s1:get_child_count(), 2);
 			assert.are.equal(#s1, 3);
-			assert.are.equal(s1.tags[1].name, "child1");
-			assert.are.equal(s1.tags[2].name, "child2");
-			assert.are.equal(#s1.tags[1], 1);
-			assert.are.equal(s1.tags[1][1].name, "grandchild1");
+			assert.are.same({ "child1", "child2" }, child_names(s1));
+			assert.are.equal(#s1:get_first_child(), 1);
+			assert.are.equal(s1:get_first_child():get_first_child().name, "grandchild1");
 		end);
 		it("should work with unicode values", function ()
 			local s = st.stanza("Объект", { xmlns = "myxmlns", ["Объект"] = "&" });
@@ -166,7 +170,7 @@ describe("util.stanza", function()
 			assert.are.equal(r.id, s.id);
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
-			assert.are.equal(#r.tags, 0, "A reply should not include children of the original stanza");
+			assert.are.equal(r:has_child_tags(), false, "A reply should not include children of the original stanza");
 		end);
 
 		it("should work for <iq get>", function()
@@ -180,7 +184,7 @@ describe("util.stanza", function()
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
 			assert.are.equal(r.attr.type, "result");
-			assert.are.equal(#r.tags, 0, "A reply should not include children of the original stanza");
+			assert.are.equal(r:has_child_tags(), false, "A reply should not include children of the original stanza");
 		end);
 
 		it("should work for <iq set>", function()
@@ -194,7 +198,7 @@ describe("util.stanza", function()
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
 			assert.are.equal(r.attr.type, "result");
-			assert.are.equal(#r.tags, 0, "A reply should not include children of the original stanza");
+			assert.are.equal(r:has_child_tags(), false, "A reply should not include children of the original stanza");
 		end);
 
 		it("should reject not-stanzas", function ()
@@ -222,9 +226,9 @@ describe("util.stanza", function()
 			assert.are.equal(r.id, s.id);
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
-			assert.are.equal(#r.tags, 1);
-			assert.are.equal(r.tags[1].tags[1].name, "service-unavailable");
-			assert.are.equal(r.tags[1].attr.by, "host");
+			assert.are.equal(r:get_child_count(), 1);
+			assert.are.equal(r:get_first_child():get_first_child().name, "service-unavailable");
+			assert.are.equal(r:get_first_child_attr("by"), "host");
 		end);
 
 		it("should work for <iq get>", function()
@@ -238,8 +242,8 @@ describe("util.stanza", function()
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
 			assert.are.equal(r.attr.type, "error");
-			assert.are.equal(#r.tags, 1);
-			assert.are.equal(r.tags[1].tags[1].name, "service-unavailable");
+			assert.are.equal(r:get_child_count(), 1);
+			assert.are.equal(r:get_first_child():get_first_child().name, "service-unavailable");
 		end);
 
 		it("should reject not-stanzas", function ()
@@ -268,19 +272,21 @@ describe("util.stanza", function()
 			assert.are.equal(r.attr.to, s.attr.from);
 			assert.are.equal(r.attr.from, s.attr.to);
 			assert.are.equal(r.attr.type, "error");
-			assert.are.equal(r.tags[1].name, "error");
-			assert.are.equal(r.tags[1].attr.type, e.type);
-			assert.are.equal(r.tags[1].tags[1].name, e.condition);
-			assert.are.equal(r.tags[1].tags[2]:get_text(), e.text);
-			assert.are.equal("this.test", r.tags[1].attr.by);
+			local error_tag = r:get_first_child();
+			assert.are.equal(error_tag.name, "error");
+			assert.are.equal(r:get_first_child_attr("type"), e.type);
+			assert.are.equal(error_tag:get_first_child().name, e.condition);
+			assert.are.equal(error_tag:get_child_text("text", "urn:ietf:params:xml:ns:xmpp-stanzas"), e.text);
+			assert.are.equal("this.test", r:get_first_child_attr("by"));
 		end);
 
 		it("should accept util.error objects with an URI", function ()
 			local s = st.message({ to = "touser", from = "fromuser", id = "123", type = "chat" }, "Hello");
 			local gone = errors.new({ condition = "gone", extra = { uri = "file:///dev/null" } })
 			local gonner = st.error_reply(s, gone);
-			assert.are.equal("gone", gonner.tags[1].tags[1].name);
-			assert.are.equal("file:///dev/null", gonner.tags[1].tags[1][1]);
+			local error_tag = gonner:get_first_child();
+			assert.are.equal("gone", error_tag:get_first_child().name);
+			assert.are.equal("file:///dev/null", error_tag:get_first_child_text());
 		end);
 
 		it("should accept util.error objects with application specific error", function ()
@@ -288,15 +294,17 @@ describe("util.stanza", function()
 			local e = errors.new({ condition = "internal-server-error", text = "Namespaced thing happened",
 				extra = {namespace="xmpp:example.test", condition="this-happened"} })
 			local r = st.error_reply(s, e);
-			assert.are.equal("xmpp:example.test", r.tags[1].tags[3].attr.xmlns);
-			assert.are.equal("this-happened", r.tags[1].tags[3].name);
+			local app_error = r:get_first_child():get_child(nil, "xmpp:example.test");
+			assert.are.equal("xmpp:example.test", app_error.attr.xmlns);
+			assert.are.equal("this-happened", app_error.name);
 
 			local e2 = errors.new({ condition = "internal-server-error", text = "Namespaced thing happened",
 				extra = {tag=st.stanza("that-happened", { xmlns = "xmpp:example.test", ["another-attribute"] = "here" })} })
 			local r2 = st.error_reply(s, e2);
-			assert.are.equal("xmpp:example.test", r2.tags[1].tags[3].attr.xmlns);
-			assert.are.equal("that-happened", r2.tags[1].tags[3].name);
-			assert.are.equal("here", r2.tags[1].tags[3].attr["another-attribute"]);
+			local app_error2 = r2:get_first_child():get_child(nil, "xmpp:example.test");
+			assert.are.equal("xmpp:example.test", app_error2.attr.xmlns);
+			assert.are.equal("that-happened", app_error2.name);
+			assert.are.equal("here", app_error2.attr["another-attribute"]);
 		end);
 		end);
 	end);
@@ -411,7 +419,7 @@ describe("util.stanza", function()
 			assert.falsy(s:get_child(nil,"test2"));
 
 			s:remove_children();
-			assert.falsy(s.tags[1]);
+			assert.is_false(s:has_child_tags());
 		end);
 	end);
 
@@ -429,9 +437,9 @@ describe("util.stanza", function()
 				end
 				return tag;
 			end
-			assert.equal(4, #s.tags);
+			assert.equal(4, s:get_child_count());
 			s:maptags(one_filter);
-			assert.equal(2, #s.tags);
+			assert.equal(2, s:get_child_count());
 		end);
 
 		it("should work with multiple consecutive text nodes", function ()
@@ -472,10 +480,10 @@ describe("util.stanza", function()
 				};
 			});
 
-			assert.equal(4, #s.tags);
+			assert.equal(4, s:get_child_count());
 
 			s:maptags(function (tag) return tag; end);
-			assert.equal(4, #s.tags);
+			assert.equal(4, s:get_child_count());
 
 			s:maptags(function (tag)
 				if tag.name == "c" then
@@ -483,11 +491,15 @@ describe("util.stanza", function()
 				end
 				return tag;
 			end);
-			assert.equal(3, #s.tags);
+			assert.equal(3, s:get_child_count());
 		end);
 		it("errors on invalid data - #981", function ()
+			-- This test case manipulates the private data structure,
+			-- which is our best guess at the cause of #981. If, in a
+			-- future version, this is no longer possible, we can
+			-- probably just remove this test case.
 			local s = st.message({}, "Hello");
-			s.tags[1] = st.clone(s.tags[1]);
+			s._tags[1] = st.clone(s._tags[1]);
 			assert.has_error_match(function ()
 				s:maptags(function () end);
 			end, "Invalid stanza");
@@ -540,7 +552,7 @@ describe("util.stanza", function()
 			assert(st.is_stanza(s2));
 			assert.equal("message", s2.name);
 			assert.equal(0, #s2);
-			assert.equal(0, #s2.tags);
+			assert.equal(0, s2:get_child_count());
 			assert.equal("chat", s2.attr.type);
 		end);
 
@@ -554,7 +566,7 @@ describe("util.stanza", function()
 			assert(st.is_stanza(s2));
 			assert.equal("message", s2.name);
 			assert.equal(0, #s2);
-			assert.equal(0, #s2.tags);
+			assert.equal(0, s2:get_child_count());
 			assert.equal("true", s2.attr["my-awesome-ns\1bar"]);
 		end);
 	end);

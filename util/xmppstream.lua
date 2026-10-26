@@ -134,7 +134,7 @@ local function new_sax_handlers(session, stream_callbacks, cb_handleprogress, ma
 				cb_error(session, "invalid-top-level-element");
 			end
 
-			stanza = setmetatable({ name = name, attr = attr, tags = {} }, stanza_mt);
+			stanza = setmetatable({ name = name, attr = attr, _tags = {} }, stanza_mt);
 			child_quota = max_elements;
 		else -- we are inside a stanza, so add a tag
 			if lxp_supports_bytecount then
@@ -142,9 +142,9 @@ local function new_sax_handlers(session, stream_callbacks, cb_handleprogress, ma
 			end
 			t_insert(stack, stanza);
 			local oldstanza = stanza;
-			stanza = setmetatable({ name = name, attr = attr, tags = {} }, stanza_mt);
+			stanza = setmetatable({ name = name, attr = attr, _tags = {} }, stanza_mt);
 			t_insert(oldstanza, stanza);
-			t_insert(oldstanza.tags, stanza);
+			t_insert(oldstanza._tags, stanza);
 		end
 	end
 
