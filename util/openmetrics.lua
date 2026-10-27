@@ -188,7 +188,7 @@ end
 function metric_family_mt:with_labels(...)
 	local count = select('#', ...)
 	if count ~= self.user_labels then
-		error("number of labels passed to with_labels does not match number of label keys")
+		error(("number of labels passed to with_labels does not match number of label keys (%d expected, got %d)"):format(self.user_labels, count))
 	end
 	if count == 0 then
 		return self.data
