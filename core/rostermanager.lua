@@ -12,7 +12,6 @@
 local log = require "prosody.util.logger".init("rostermanager");
 
 local new_id = require "prosody.util.id".short;
-local new_cache = require "prosody.util.cache".new;
 
 local pairs = pairs;
 local tostring = tostring;
@@ -21,6 +20,7 @@ local type = type;
 local hosts = prosody.hosts;
 local bare_sessions = prosody.bare_sessions;
 
+local cm = require "prosody.core.cachemanager";
 local um_user_exists = require "prosody.core.usermanager".user_exists;
 local st = require "prosody.util.stanza";
 local storagemanager = require "prosody.core.storagemanager";
@@ -121,7 +121,7 @@ local function load_roster(username, host)
 	local roster_cache = hosts[host] and hosts[host].roster_cache;
 	if not roster_cache then
 		if hosts[host] then
-			roster_cache = new_cache(1024);
+			roster_cache = cm.new_managed_cache(host, "roster", 1024);
 			hosts[host].roster_cache = roster_cache;
 		end
 	else
