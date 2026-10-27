@@ -186,8 +186,13 @@ local function new_table(col_specs, max_width, separator)
 		for i, column in ipairs(col_specs) do
 			local width = widths[i];
 			local v = row[not titles and column.key or i];
-			if not titles and column.mapper then
-				v = column.mapper(v, row, width, column);
+			if not titles then
+				if column.mapper then
+					v = column.mapper(v, row, width, column);
+				end
+				if column.format then
+					v = column.format:format(v);
+				end
 			end
 			if v == nil then
 				v = column.default or "";
