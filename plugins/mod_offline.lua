@@ -78,7 +78,7 @@ if cleanup_after ~= math.huge then
 	-- outside the cleanup range.
 
 	if not (offline_messages.caps and offline_messages.caps.wildcard_delete) then
-		local last_date = require "prosody.util.cache".new(module:get_option_integer("archive_cleanup_date_cache_size", 1000, 1));
+		local last_date = module:new_cache("archive_cleanup_date", 1000);
 		function schedule_cleanup(username, date)
 			date = date or datestamp();
 			if last_date:get(username) == date then return end

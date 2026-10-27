@@ -8,7 +8,6 @@
 
 
 local create_throttle = require "prosody.util.throttle".create;
-local new_cache = require "prosody.util.cache".new;
 local ip_util = require "prosody.util.ip";
 local new_ip = ip_util.new_ip;
 local match_ip = ip_util.match;
@@ -23,11 +22,10 @@ local blocklisted_ips = module:get_option_set("registration_blocklist", module:g
 
 local throttle_max = module:get_option_number("registration_throttle_max", min_seconds_between_registrations and 1, 0);
 local throttle_period = module:get_option_period("registration_throttle_period", min_seconds_between_registrations);
-local throttle_cache_size = module:get_option_integer("registration_throttle_cache_size", 100, 1);
 local blocklist_overflow = module:get_option_boolean("blocklist_on_registration_throttle_overload",
 	module:get_option_boolean("blacklist_on_registration_throttle_overload", false));
 
-local throttle_cache = new_cache(throttle_cache_size, blocklist_overflow and function (ip, throttle)
+local throttle_cache = module:new_cache("registration_throttle", 100, blocklist_overflow and function (ip, throttle)
 	if not throttle:peek() then
 		module:log("info", "Adding ip %s to registration blocklist", ip);
 		blocklisted_ips[ip] = true;

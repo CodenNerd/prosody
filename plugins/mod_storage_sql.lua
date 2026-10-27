@@ -1,7 +1,6 @@
 
 -- luacheck: ignore 212/self
 
-local cache = require "prosody.util.cache";
 local json = require "prosody.util.json";
 local xml_parse = require "prosody.util.xml".parse;
 local uuid = require "prosody.util.uuid";
@@ -180,7 +179,7 @@ end
 --- Archive store API
 
 local archive_item_limit = module:get_option_integer("storage_archive_item_limit", nil, 0);
-local archive_item_count_cache = cache.new(module:get_option_integer("storage_archive_item_limit_cache_size", 1000, 1));
+local archive_item_count_cache = module:new_cache("storage_archive_item_limit", 1000);
 
 local item_count_cache_hit = module:measure("item_count_cache_hit", "rate");
 local item_count_cache_miss = module:measure("item_count_cache_miss", "rate")

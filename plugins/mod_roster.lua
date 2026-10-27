@@ -225,7 +225,11 @@ module:add_item("shell-command", {
 		local print = self.session.print;
 		local it = require "prosody.util.iterators";
 
+		print("load")
+
 		local roster = assert(rm_load_roster(jid_split(jid)));
+
+		print("comp")
 
 		local function sort_func(a, b)
 			if type(a) == "string" and type(b) == "string" then

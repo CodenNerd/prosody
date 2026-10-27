@@ -482,7 +482,7 @@ if cleanup_after ~= math.huge then
 	-- messages, we collect the union of sets of rooms from dates that fall
 	-- outside the cleanup range.
 
-	local last_date = require "prosody.util.cache".new(module:get_option_integer("muc_log_cleanup_date_cache_size", 1000, 1));
+	local last_date = module:new_cache("muc_log_cleanup_date", 1000);
 	if not ( archive.caps and archive.caps.wildcard_delete ) then
 		function schedule_cleanup(roomname, date)
 			date = date or datestamp();

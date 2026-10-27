@@ -6,7 +6,6 @@ local set_new = require "prosody.util.set".new;
 local st = require "prosody.util.stanza";
 local calculate_hash = require "prosody.util.caps".calculate_hash;
 local rostermanager = require "prosody.core.rostermanager";
-local cache = require "prosody.util.cache";
 local set = require "prosody.util.set";
 local new_id = require "prosody.util.id".medium;
 local storagemanager = require "prosody.core.storagemanager";
@@ -25,11 +24,8 @@ local empty_set = set_new();
 -- username -> object passed to module:add_items()
 local pep_service_items = {};
 
--- size of caches with full pubsub service objects
-local service_cache_size = module:get_option_integer("pep_service_cache_size", 1000, 1);
-
 -- username -> util.pubsub service object
-local services = cache.new(service_cache_size, function (username, _)
+local services = module:new_cache("service", 1000, function (username, _)
 	local item = pep_service_items[username];
 	pep_service_items[username] = nil;
 	if item then
@@ -41,10 +37,10 @@ end):table();
 local info_cache_size = module:get_option_integer("pep_info_cache_size", 10000, 1);
 
 -- username -> recipient -> set of nodes
-local recipients = cache.new(info_cache_size):table();
+local recipients = module:new_cache("recipients", info_cache_size):table();
 
 -- caps hash -> set of nodes
-local hash_map = cache.new(info_cache_size):table();
+local hash_map = module:new_cache("caps", info_cache_size):table();
 
 local host = module.host;
 

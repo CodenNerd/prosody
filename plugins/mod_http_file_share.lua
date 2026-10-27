@@ -17,7 +17,6 @@ local dataform = require "prosody.util.dataforms".new;
 local urlencode = require "prosody.util.http".urlencode;
 local dt = require "prosody.util.datetime";
 local hi = require "prosody.util.human.units";
-local cache = require "prosody.util.cache";
 local join_path = require "util.paths".join;
 local lfs = require "lfs";
 local ENOENT = require "prosody.util.pposix".ENOENT;
@@ -93,8 +92,8 @@ local upload_errors = errors.init(module.name, namespace, {
 	writefail = { code = 500; type = "wait"; condition = "internal-server-error" }
 });
 
-local upload_cache = cache.new(1024);
-local quota_cache = cache.new(1024);
+local upload_cache = module:new_cache("upload", 1024);
+local quota_cache = module:new_cache("quota", 1024);
 
 local total_storage_usage = unknown;
 

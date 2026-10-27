@@ -30,8 +30,7 @@ local full_sessions = prosody.full_sessions;
 -- disk, which we want to avoid during routing. On the other hand, we don't
 -- want to use too much memory either, so this can be tuned by advanced
 -- users. TODO use science to figure out a better default, 64 is just a guess.
-local cache_size = module:get_option_integer("blocklist_cache_size", 256, 1);
-local blocklist_cache = require"prosody.util.cache".new(cache_size);
+local blocklist_cache = module:new_cache("blocklist", 256);
 
 local null_blocklist = {};
 
