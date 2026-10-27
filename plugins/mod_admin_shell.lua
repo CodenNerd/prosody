@@ -833,6 +833,13 @@ function def_env.module:info(name, hosts)
 				end
 			end
 		end
+
+		if mod.module.caches and next(mod.module.caches) ~= nil then
+			print("  caches:");
+			for c, info in pairs(mod.module.caches) do
+				print(("    - %s (%d/%d ~ %0.2f%%)"):format(info.name, c:count(), c.size, 100 * (c:count()/c.size)));
+			end
+		end
 	end
 	return true;
 end
@@ -2403,6 +2410,52 @@ function def_env.debug:timers()
 		end
 	end
 	return true;
+end
+
+describe_command [[debug:caches() - Show the status of global caches]]
+function def_env.debug:caches(hosts)
+	local print = self.session.print;
+	hosts = get_hosts_set(hosts);
+
+	local n_caches = 0;
+
+
+	local row = format_table({
+		{ title = "Utilization"; width = "5", key = "utilization", format = "%0.2f%%" };
+		{ title = "Status"; width = "10", key = "status" };
+		{ title = "Name"; width = "1p", key = "id" };
+	}, self.session.width, self.session.column_separator);
+	print(row())
+
+	local listed_caches = {};
+
+	local function list_caches(caches, host)
+		if not caches then return; end
+		for c, info in pairs(caches) do
+			n_caches = n_caches + 1;
+			table.insert(listed_caches, {
+				id = ("%s:%s"):format(host, info.name);
+				status = ("%d/%d"):format(c:count(), c.size);
+				utilization = 100 * (c:count()/c.size);
+			});
+		end
+	end
+
+
+	list_caches(prosody.caches, "*");
+	for host in hosts do
+		list_caches(prosody.hosts[host].caches, host);
+	end
+
+	table.sort(listed_caches, function (a, b)
+		return a.utilization > b.utilization;
+	end);
+
+	for _, cache_row in ipairs(listed_caches) do
+		print(row(cache_row));
+	end
+
+	return true, ("Showing %d caches"):format(n_caches);
 end
 
 describe_command [[debug:async() - Show information about pending asynchronous tasks]]
