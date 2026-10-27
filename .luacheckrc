@@ -95,6 +95,7 @@ files["plugins/"] = {
 		"module.may",
 		"module.measure",
 		"module.metric",
+		"module.new_cache",
 		"module.on_ready",
 		"module.open_store",
 		"module.provides",

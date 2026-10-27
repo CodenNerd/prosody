@@ -827,4 +827,19 @@ function api:once(f)
 	return self:on_ready(f);
 end
 
+function api:new_cache(name, default_size, on_evict)
+	if name ~= self.name then
+		name = self.name.."_"..name;
+	end
+
+	local cm = require "prosody.core.cachemanager";
+	local c = cm.new_managed_cache(self.host, name, default_size, on_evict);
+
+	self:hook("module-unloaded", function ()
+		cm.delete_managed_cache(self.host, name);
+	end);
+
+	return c;
+end
+
 return api;
