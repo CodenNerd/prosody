@@ -42,5 +42,8 @@ return {
 
 		-- util.human.io.simple_version_compare
 		"simple-version-compare";
+
+		-- Support for cachemanager and module:new_cache()
+		"cachemanager";
 	};
 };
