@@ -170,6 +170,24 @@ end);
 
 --- Private helpers ---
 
+-- Remove the event handlers and items a module registered
+local function cleanup_module(module, host)
+	for object, event, handler in module.event_handlers:iter(nil, nil, nil) do
+		object.remove_handler(event, handler);
+	end
+
+	if module.items then -- remove items
+		local events = (host == "*" and prosody.events) or hosts[host].events;
+		for key, t in pairs(module.items) do
+			for i = #t, 1, -1 do
+				local value = t[i];
+				t[i] = nil;
+				events.fire_event("item-removed/"..key, {source = module, item = value});
+			end
+		end
+	end
+end
+
 local function do_unload_module(host, name)
 	local mod = get_module(host, name);
 	if not mod then return nil, "module-not-loaded"; end
@@ -181,20 +199,7 @@ local function do_unload_module(host, name)
 		end
 	end
 
-	for object, event, handler in mod.module.event_handlers:iter(nil, nil, nil) do
-		object.remove_handler(event, handler);
-	end
-
-	if mod.module.items then -- remove items
-		local events = (host == "*" and prosody.events) or hosts[host].events;
-		for key,t in pairs(mod.module.items) do
-			for i = #t,1,-1 do
-				local value = t[i];
-				t[i] = nil;
-				events.fire_event("item-removed/"..key, {source = mod.module, item = value});
-			end
-		end
-	end
+	cleanup_module(mod.module, host);
 	mod.module.loaded = false;
 	modulemap[host][name] = nil;
 	return true;
