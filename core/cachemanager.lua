@@ -9,10 +9,10 @@ local mf_slots_used = metric("gauge", "prosody_cache_slots_used", "","Cache slot
 local mf_slots_total = metric("gauge", "prosody_cache_slots_total", "", "Cache slots total", { "cache_name", "host" });
 
 local function new_managed_cache(host, name, default_size, on_evict)
-	if host and not prosody.hosts[host] then
+	host = host or "*";
+	if host ~= "*" and not prosody.hosts[host] then
 		error("Cannot create "..name.." cache for unknown host: "..host);
 	end
-	host = host or "*";
 	local config_size = tonumber(config.get(host or "*", name.."_cache_size") or default_size or 128);
 	if not config_size then
 		error("Invalid cache size for "..name.." on "..host);
