@@ -41,7 +41,7 @@ end);
 
 local function replace_priority(tag)
 	if tag.name == "priority" then
-		return st.stanza("priority"):add_text("0");
+		return st.stanza("priority"):text("0");
 	end
 	return tag;
 end
