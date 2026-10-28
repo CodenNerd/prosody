@@ -49,7 +49,7 @@ end
 module:hook("pep-publish-item", function (event)
 	local session, bare, node, id, item = event.session, event.user, event.node, event.id, event.item;
 	item.attr.xmlns = nil;
-	local disable = item:get_child_count() ~= 1 or item:get_first_child():get_child_count() == 0;
+	local disable = item:get_child_count() ~= 1 or #item:get_first_child() == 0;
 	if not item:has_child_tags() then item.name = "retract"; end
 	local stanza = st.message({from=bare, type='headline'})
 		:tag('event', {xmlns='http://jabber.org/protocol/pubsub#event'})
