@@ -6,6 +6,8 @@
 -- Provides some protection from e.g. CAPEC-135, CWE-117, CWE-134, CWE-93
 
 local tostring = tostring;
+local getmetatable = getmetatable;
+local rawget = rawget;
 local unpack = table.unpack;
 local pack = table.pack;
 local valid_utf8 = require "prosody.util.encodings".utf8.valid;
@@ -57,11 +59,14 @@ local function format(formatstring, ...)
 	-- This function does not accept string values containing embedded zeros, except as arguments to the q option.
 	-- a and A are only in Lua 5.2+
 	-- Lua 5.4 adds a p format that produces a pointer
+	-- v uses __format(value[, modifier]), falling back to tostring.
 
 
 	-- process each format specifier
 	local i = 0;
-	formatstring = formatstring:gsub("%%[^cdiouxXaAeEfgGpqs%%]*[cdiouxXaAeEfgGpqs%%]", function(spec)
+	formatstring = formatstring:gsub("%%[^cdiouxXaAeEfgGpqsv%%]*[cdiouxXaAeEfgGpqsv%%]", function(spec)
+		local modified;
+
 		if spec == "%%" then return end
 		i = i + 1;
 		local arg = args[i];
@@ -74,9 +79,25 @@ local function format(formatstring, ...)
 		local option = spec:sub(-1);
 		local t = type(arg);
 
+		-- Convert before escaping so hook output gets the same log protection.
+		if option == "v" then
+			local mt = getmetatable(arg);
+			local formatter = type(mt) == "table" and rawget(mt, "__format");
+			if type(formatter) == "function" then
+				if #spec > 2 then
+					arg = formatter(arg, spec:sub(2, -2));
+				else
+					arg = formatter(arg);
+				end
+			end
+			arg = tostring(arg);
+			args[i] = arg;
+			modified, option, t, spec = true, "s", "string", "%s";
+		end
+
 		if option == "s" and t == "string" and not arg:find("[%z\1-\31\128-\255]") then
 			-- No UTF-8 or control characters, assumed to be the common case.
-			return
+			return modified and spec;
 		elseif t == "number" then
 			if option == "g" or (option == "d" and num_type(arg) == "integer") then return end
 		elseif option == "s" and t ~= "string" then
@@ -131,6 +152,7 @@ local function format(formatstring, ...)
 			args[i] = tostring(arg);
 			return "[%s]";
 		end
+		return modified and spec;
 	end);
 
 	-- process extra args

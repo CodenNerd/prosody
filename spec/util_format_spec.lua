@@ -42,6 +42,97 @@ describe("util.format", function()
 			assert.equal("\"Hello\\nWorld\"", format("%q", "Hello\nWorld"))
 		end)
 
+		describe("custom formatting (%v)", function ()
+			it("passes modifiers to the formatting hook", function ()
+				local value = setmetatable({}, {
+					__format = function (self, spec)
+						assert.is_table(self);
+						assert.equal("U", spec);
+						return "summary";
+					end;
+					__tostring = function () error("unexpected full serialization"); end;
+				});
+				assert.equal("summary", format("%Uv", value));
+			end);
+
+			it("supports plain values and custom objects", function ()
+				local function testv(fmt, input, output, formatter)
+					if formatter then
+						setmetatable(input, { __format = formatter });
+					end
+					assert.equal(output, format(fmt, input), "Unexpected rendering of "..fmt.." with "..type(input));
+				end
+				testv("%v", "hello", "hello");
+				testv("%v", 1, "1");
+				testv("%v", true, "true");
+				testv("%v", false, "false");
+				local function formatter(input, spec)
+					if spec == "U" then return input.hello:upper(); end
+					return input.hello;
+				end
+				testv("%v", { hello = "world" }, "world", formatter);
+				testv("%Uv", { hello = "world" }, "WORLD", formatter);
+			end);
+
+			it("omits the modifier argument for plain %v", function ()
+				local value = setmetatable({}, { __format = function (...)
+					assert.equal(1, select("#", ...));
+					return "default";
+				end });
+				assert.equal("default", format("%v", value));
+			end);
+
+			it("supports modifiers and mixed conversions", function ()
+				local value = setmetatable({}, { __format = function (_, spec)
+					assert.equal("*", spec);
+					return "yes";
+				end });
+				assert.equal("% before yes 42 after", format("%% %s %*v %d %s", "before", value, 42, "after"));
+			end);
+
+			it("leaves ordinary string conversion unchanged", function ()
+				local value = setmetatable({}, {
+					__format = function () error("unexpected alternate formatting"); end;
+					__tostring = function () return "full"; end;
+				});
+				assert.equal("full", format("%s", value));
+			end);
+
+			it("falls back to ordinary string conversion without a hook", function ()
+				assert.equal("hello", format("%v", "hello"));
+				assert.equal("42", format("%v", 42));
+				assert.equal("true", format("%v", true));
+				assert.equal("(nil)", format("%v", nil));
+				local value = setmetatable({}, { __metatable = false; __tostring = function () return "protected"; end });
+				assert.equal("protected", format("%v", value));
+			end);
+
+			-- Made the decision that %v is primarily for human consumption, and should forbid e.g. control chars
+			it("escapes hook output", function ()
+				local value = setmetatable({}, { __format = function () return "\1hello\nworld"; end });
+				assert.equal("␁hello\n\tworld", format("%v", value));
+				value = setmetatable({}, { __format = function () return "Hello w\195rld"; end });
+				assert.equal("\"Hello w\\195rld\"", format("%v", value));
+			end);
+
+			-- TODO: This might fit better in a util.logger test suite, but we don't currently have one
+			-- It ensures log parameters are not eagerly evaluated, which is important for performance, and
+			-- the primary motivation for adding %v to util.format
+			it("evaluates the hook only when a formatting sink is registered", function ()
+				local logger = require "util.logger";
+				local calls, output = 0;
+				local value = setmetatable({}, { __format = function () calls = calls + 1; return "summary"; end });
+				local log = logger.make_logger("format-test", "format-test");
+				log("%v", value);
+				assert.equal(0, calls);
+				local sink = logger.add_simple_sink(function (_, _, message) output = message; end, { "format-test" });
+				log("%v", value);
+				logger.remove_sink(sink);
+				assert.equal(1, calls);
+				assert.equal("summary", output);
+			end);
+		end);
+
 		-- Tests generated with loops!
 		describe("nil", function ()
 			describe("to %c", function ()
