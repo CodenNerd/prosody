@@ -173,7 +173,7 @@ local function bounce_sendq(session, reason)
 			);
 			core_process_stanza(dummy, reply);
 		else
-			(session.log or log)("debug", "Not eligible for bouncing, discarding %s", stanza:top_tag());
+			(session.log or log)("debug", "Not eligible for bouncing, discarding %v", stanza);
 		end
 	end
 	session.sendq = nil;
@@ -554,7 +554,7 @@ function session_events.streamopened(session, event)
 		to, from = session.to_host, session.from_host;
 
 		session.streamid = uuid_gen();
-		(session.log or log)("debug", "Incoming s2s received %s", st.stanza("stream:stream", attr):top_tag());
+		(session.log or log)("debug", "Incoming s2s received %v", st.stanza("stream:stream", attr));
 		if to then
 			if not hosts[to] then
 				-- Attempting to connect to a host we don't serve
@@ -858,7 +858,7 @@ local function initialize_session(session)
 	end
 
 	function session.sends2s(t)
-		log("debug", "Sending[%s]: %s", session.type, t.top_tag and t:top_tag() or t:match("^[^>]*>?"));
+		log("debug", "Sending[%s]: %v", session.type, st.is_stanza(t) and t or t:match("^[^>]*>?"));
 		if t.name then
 			t = filter("stanzas/out", t);
 		end

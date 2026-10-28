@@ -52,7 +52,7 @@ end
 
 local iq_types = { set=true, get=true, result=true, error=true };
 function core_process_stanza(origin, stanza)
-	(origin.log or log)("debug", "Received[%s]: %s", origin.type, stanza:top_tag())
+	(origin.log or log)("debug", "Received[%s]: %v", origin.type, stanza)
 
 	if origin.type == "c2s" and not stanza.attr.xmlns then
 		local name, st_type = stanza.name, stanza.attr.type;

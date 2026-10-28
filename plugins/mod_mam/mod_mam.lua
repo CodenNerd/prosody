@@ -430,7 +430,7 @@ local function message_handler(event, c2s)
 	local why = event_payload.reason;
 
 	if not should then
-		log("debug", "Not archiving stanza: %s (%s)", stanza:top_tag(), event_payload.reason);
+		log("debug", "Not archiving stanza: %v (%s)", stanza, event_payload.reason);
 		return;
 	end
 
@@ -445,7 +445,7 @@ local function message_handler(event, c2s)
 			end
 		end);
 		if not clone_for_storage:has_child_tags() then
-			log("debug", "Not archiving stanza: %s (empty when stripped)", stanza:top_tag());
+			log("debug", "Not archiving stanza: %v (empty when stripped)", stanza);
 			return;
 		end
 	else
@@ -454,7 +454,7 @@ local function message_handler(event, c2s)
 
 	-- Check with the users preferences
 	if shall_store(store_user, with) then
-		log("debug", "Archiving stanza: %s (%s)", stanza:top_tag(), why);
+		log("debug", "Archiving stanza: %v (%s)", stanza, why);
 
 		-- And stash it
 		local time = time_now();
@@ -491,7 +491,7 @@ local function message_handler(event, c2s)
 			log("error", "Could not archive stanza: %s", err);
 		end
 	else
-		log("debug", "Not archiving stanza: %s (prefs)", stanza:top_tag());
+		log("debug", "Not archiving stanza: %v (prefs)", stanza);
 	end
 end
 

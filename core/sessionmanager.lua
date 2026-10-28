@@ -52,7 +52,7 @@ local function new_session(conn)
 	end
 
 	session.send = function (t)
-		session.log("debug", "Sending[%s]: %s", session.type, t.top_tag and t:top_tag() or t:match("^[^>]*>?"));
+		session.log("debug", "Sending[%s]: %v", session.type, t.top_tag and t or t:match("^[^>]*>?"));
 		if t.name then
 			t = filter("stanzas/out", t);
 		end

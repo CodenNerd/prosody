@@ -190,7 +190,7 @@ module:hook("iq/bare/http://jabber.org/protocol/pubsub:pubsub", function(event)
 				module:log("debug", "Payload is missing the <item>", node);
 			end
 		else
-			module:log("debug", "Unhandled payload: %s", payload and payload:top_tag() or "(no payload)");
+			module:log("debug", "Unhandled payload: %v", payload or "(no payload)");
 		end
 	elseif stanza.attr.type == 'get' then
 		local user = stanza.attr.to and jid_bare(stanza.attr.to) or session.username..'@'..session.host;

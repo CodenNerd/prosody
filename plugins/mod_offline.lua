@@ -38,7 +38,7 @@ module:hook("message/offline/handle", function(event)
 	local ok = offline_messages:append(node, nil, stanza, os.time(), "");
 	if ok then
 		schedule_cleanup(node);
-		module:log("debug", "Saved to offline storage: %s", stanza:top_tag());
+		module:log("debug", "Saved to offline storage: %v", stanza);
 	end
 	return ok;
 end, -1);
