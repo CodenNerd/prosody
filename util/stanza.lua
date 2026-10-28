@@ -309,6 +309,16 @@ function stanza_mt:childtags(name, xmlns)
 	end;
 end
 
+function stanza_mt:alltags()
+	local tags, i, max_i = self.tags, 0, #self.tags;
+	return function ()
+		if i < max_i then
+			i = i + 1;
+			return tags[i];
+		end
+	end;
+end
+
 function stanza_mt:maptags(callback)
 	local tags, curr_tag = self.tags, 1;
 	local n_children, n_tags = #self, #tags;

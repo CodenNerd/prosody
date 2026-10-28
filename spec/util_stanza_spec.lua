@@ -415,6 +415,76 @@ describe("util.stanza", function()
 		end);
 	end);
 
+	describe("#alltags", function ()
+		local function collect(s)
+			local names = {};
+			for tag in s:alltags() do
+				table.insert(names, tag.name);
+			end
+			return names;
+		end
+
+		it("yields nothing for a stanza without child tags", function ()
+			assert.same({}, collect(st.stanza("x", { xmlns = "urn:x" })));
+			assert.same({}, collect(st.stanza("x", { xmlns = "urn:x" }):text("just text")));
+		end);
+
+		it("yields every direct child tag in order, regardless of namespace", function ()
+			local s = st.message({ xmlns = "jabber:client" })
+				:tag("body"):text("hi"):up()
+				:tag("active", { xmlns = "http://jabber.org/protocol/chatstates" }):up()
+				:tag("thread"):up()
+				:tag("x", { xmlns = "jabber:x:oob" }):up();
+			assert.same({ "body", "active", "thread", "x" }, collect(s));
+			-- unlike childtags(), which only matches the parent's namespace by default
+			local same_ns = {};
+			for tag in s:childtags() do table.insert(same_ns, tag.name); end
+			assert.same({ "body", "thread" }, same_ns);
+		end);
+
+		it("skips text nodes and does not descend into grandchildren", function ()
+			local s = st.stanza("root")
+				:text("leading")
+				:tag("a"):tag("a1"):up():tag("a2"):up():up()
+				:text("middle")
+				:tag("b"):up()
+				:text("trailing");
+			assert.same({ "a", "b" }, collect(s));
+		end);
+
+		it("yields the actual child objects", function ()
+			local s = st.stanza("root"):tag("a"):up():tag("b"):up();
+			local i = 0;
+			for tag in s:alltags() do
+				i = i + 1;
+				assert.equal(s.tags[i], tag);
+			end
+			assert.equal(2, i);
+		end);
+
+		it("returns independent iterators that stay exhausted", function ()
+			local s = st.stanza("root"):tag("a"):up():tag("b"):up();
+			local it1, it2 = s:alltags(), s:alltags();
+			assert.equal("a", it1().name);
+			assert.equal("a", it2().name);
+			assert.equal("b", it1().name);
+			assert.is_nil(it1());
+			assert.is_nil(it1());
+			assert.equal("b", it2().name);
+		end);
+
+		it("does not visit tags added during iteration", function ()
+			local s = st.stanza("root"):tag("a"):up():tag("b"):up();
+			local seen = {};
+			for tag in s:alltags() do
+				table.insert(seen, tag.name);
+				s:tag("added"):up();
+			end
+			assert.same({ "a", "b" }, seen);
+			assert.equal(4, #s.tags);
+		end);
+	end);
+
 	describe("#maptags", function ()
 		it("should work", function ()
 			local s = st.stanza("test")
