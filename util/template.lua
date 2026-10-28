@@ -45,7 +45,7 @@ local function create_clone_string(stanza, lookup, xmlns)
 	if not lookup[stanza] then
 		local s = ('setmetatable({name=%q,attr=%s,tags={'):format(stanza.name, create_attr_string(stanza.attr, xmlns));
 		-- add tags
-		for tag in stanza:childtags() do
+		for tag in stanza:alltags() do
 			s = s..create_clone_string(tag, lookup, stanza.attr.xmlns)..";";
 		end
 		s = s..'};';
