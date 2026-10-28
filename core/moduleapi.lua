@@ -835,9 +835,8 @@ function api:new_cache(name, default_size, on_evict)
 	local cm = require "prosody.core.cachemanager";
 	local c = cm.new_managed_cache(self.host, name, default_size, on_evict);
 
-	self:hook("module-unloaded", function ()
-		cm.delete_managed_cache(self.host, name);
-	end);
+	-- cachemanager drops the cache when modulemanager removes the item
+	self:add_item("cache", { cache = c; name = name });
 
 	return c;
 end

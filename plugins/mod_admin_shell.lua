@@ -834,9 +834,11 @@ function def_env.module:info(name, hosts)
 			end
 		end
 
-		if mod.module.caches and next(mod.module.caches) ~= nil then
+		local caches = mod.module.items and mod.module.items.cache;
+		if caches and caches[1] then
 			print("  caches:");
-			for c, info in pairs(mod.module.caches) do
+			for _, info in ipairs(caches) do
+				local c = info.cache;
 				print(("    - %s (%d/%d ~ %0.2f%%)"):format(info.name, c:count(), c.size, 100 * (c:count()/c.size)));
 			end
 		end
@@ -2431,7 +2433,8 @@ function def_env.debug:caches(hosts)
 
 	local function list_caches(caches, host)
 		if not caches then return; end
-		for c, info in pairs(caches) do
+		for _, info in pairs(caches) do
+			local c = info.cache;
 			n_caches = n_caches + 1;
 			table.insert(listed_caches, {
 				id = ("%s:%s"):format(host, info.name);
