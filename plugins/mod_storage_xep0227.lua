@@ -178,7 +178,7 @@ handlers.private = {
 			local private = user:get_child("query", "jabber:iq:private");
 			if private then
 				local r = {};
-				for tag in private:childtags() do
+				for tag in private:alltags() do
 					r[tag.name..":"..tag.attr.xmlns] = st.preserialize(tag);
 				end
 				return r;
