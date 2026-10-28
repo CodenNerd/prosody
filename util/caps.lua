@@ -11,17 +11,23 @@ local sha1 = require "prosody.util.hashes".sha1;
 
 local t_insert, t_sort, t_concat = table.insert, table.sort, table.concat;
 
+local xmlns_disco_info = "http://jabber.org/protocol/disco#info";
+local xmlns_x_data = "jabber:x:data";
+
 local _ENV = nil;
 -- luacheck: std none
 
 local function calculate_hash(disco_info)
 	local identities, features, extensions = {}, {}, {};
-	for tag in disco_info:childtags() do
-		if tag.name == "identity" then
-			t_insert(identities, (tag.attr.category or "").."\0"..(tag.attr.type or "").."\0"..(tag.attr["xml:lang"] or "").."\0"..(tag.attr.name or ""));
-		elseif tag.name == "feature" then
-			t_insert(features, tag.attr.var or "");
-		elseif tag.name == "x" and tag.attr.xmlns == "jabber:x:data" then
+	for tag in disco_info:alltags() do
+		local xmlns = tag.attr.xmlns or xmlns_disco_info;
+		if xmlns == xmlns_disco_info then
+			if tag.name == "identity" then
+				t_insert(identities, (tag.attr.category or "").."\0"..(tag.attr.type or "").."\0"..(tag.attr["xml:lang"] or "").."\0"..(tag.attr.name or ""));
+			elseif tag.name == "feature" then
+				t_insert(features, tag.attr.var or "");
+			end
+		elseif xmlns == xmlns_x_data and tag.name == "x" then
 			local form = {};
 			local FORM_TYPE;
 			for field in tag:childtags("field") do
