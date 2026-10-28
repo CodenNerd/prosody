@@ -238,6 +238,7 @@ local function do_load_module(host, module_name, state)
 			local ok, result, module_err = call_module_method(mod, "add_host", host_module_api);
 			if not ok or result == false then
 				modulemap[host][module_name] = nil;
+				cleanup_module(host_module_api, host);
 				return nil, ok and module_err or result;
 			end
 			return host_module;
@@ -337,6 +338,7 @@ local function do_load_module(host, module_name, state)
 	end
 	if not ok then
 		modulemap[api_instance.host][module_name] = nil;
+		cleanup_module(api_instance, api_instance.host);
 		log("error", "Error initializing module '%s' on '%s': %s", module_name, host, err or "nil");
 		api_instance:set_status("warn", "Error during load (see log)");
 	else
