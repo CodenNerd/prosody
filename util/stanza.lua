@@ -468,6 +468,11 @@ function stanza_mt.__tostring(t)
 	return t_concat(buf);
 end
 
+-- util.format calls this for %v
+function stanza_mt.__format(t)
+	return t:top_tag();
+end
+
 function stanza_mt.top_tag(t)
 	local top_tag_clone = clone(t, true);
 	return tostring(top_tag_clone):sub(1,-3)..">";
