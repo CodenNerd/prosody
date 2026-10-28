@@ -53,7 +53,7 @@ local function load_spool_file(host, filename, path)
 	local stores = userdata.stores;
 	stores.accounts = { password = password };
 
-	for tag in xml:childtags() do
+	for tag in xml:alltags() do
 		local xname = (tag.attr.xmlns or "")..":"..tag.name;
 		if tag.attr.j_private_flag == "1" and tag.attr.xmlns then
 			-- Private XML
