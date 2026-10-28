@@ -482,7 +482,8 @@ if cleanup_after ~= math.huge then
 	-- messages, we collect the union of sets of rooms from dates that fall
 	-- outside the cleanup range.
 
-	local last_date = module:new_cache("muc_log_cleanup_date", 1000);
+	local default_cache_size = module:get_option_integer("archive_cleanup_date_cache_size", 1000, 1);
+	local last_date = module:new_cache("cleanup_date", default_cache_size);
 	if not ( archive.caps and archive.caps.wildcard_delete ) then
 		function schedule_cleanup(roomname, date)
 			date = date or datestamp();

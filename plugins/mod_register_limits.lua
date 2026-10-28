@@ -25,7 +25,8 @@ local throttle_period = module:get_option_period("registration_throttle_period",
 local blocklist_overflow = module:get_option_boolean("blocklist_on_registration_throttle_overload",
 	module:get_option_boolean("blacklist_on_registration_throttle_overload", false));
 
-local throttle_cache = module:new_cache("registration_throttle", 100, blocklist_overflow and function (ip, throttle)
+local throttle_default_cache_size = module:get_option_integer("registration_throttle_cache_size", 100, 1);
+local throttle_cache = module:new_cache("throttle", throttle_default_cache_size, blocklist_overflow and function (ip, throttle)
 	if not throttle:peek() then
 		module:log("info", "Adding ip %s to registration blocklist", ip);
 		blocklisted_ips[ip] = true;

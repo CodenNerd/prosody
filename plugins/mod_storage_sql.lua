@@ -179,7 +179,8 @@ end
 --- Archive store API
 
 local archive_item_limit = module:get_option_integer("storage_archive_item_limit", nil, 0);
-local archive_item_count_cache = module:new_cache("storage_archive_item_limit", 1000);
+local default_item_count_cache_size = module:get_option_integer("storage_archive_item_limit_cache_size", 1000, 1);
+local archive_item_count_cache = module:new_cache("archive_item_limit", default_item_count_cache_size);
 
 local item_count_cache_hit = module:measure("item_count_cache_hit", "rate");
 local item_count_cache_miss = module:measure("item_count_cache_miss", "rate")
