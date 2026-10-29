@@ -337,6 +337,9 @@ local function do_load_module(host, module_name, state)
 		end
 	end
 	if not ok then
+		-- If it failed after module:set_global(), it is still registered on the original host,
+		-- clear that instead of api_instance.host ('*')
+		modulemap[host][module_name] = nil;
 		modulemap[api_instance.host][module_name] = nil;
 		cleanup_module(api_instance, api_instance.host);
 		log("error", "Error initializing module '%s' on '%s': %s", module_name, host, err or "nil");
