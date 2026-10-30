@@ -151,6 +151,9 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_m
 				if s_match(mcf, "^$2%w?%$") then
 					-- bcrypt has a fixed size salt with no $ separator
 					mcf_prefix = s_match(mcf, "^$2[abxy]?$[1-9]%d*$......................");
+				elseif not mcf_prefix then
+					log("debug", "Invalid credentials returned by crypt profile")
+					return "failure", "not-authorized";
 				end
 
 				local server_first_message = ("r=%s,f=%s"):format(nonce, base64.encode(mcf_prefix));
