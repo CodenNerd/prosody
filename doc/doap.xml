@@ -71,6 +71,7 @@
     </implements>
     <implements rdf:resource="https://datatracker.ietf.org/doc/draft-ietf-dance-client-auth"/>
     <implements rdf:resource="http://www.unicode.org/reports/tr39/"/>
+    <implements rdf:resource="https://datatracker.ietf.org/doc/draft-bouchez-scram-mcf/"/>
     <implements>
       <xmpp:SupportedXep>
         <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0004.html"/>

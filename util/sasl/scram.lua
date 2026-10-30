@@ -88,7 +88,7 @@ local function get_scram_hasher(H, HMAC, Hi)
 	end
 end
 
-local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb)
+local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_mcf)
 	local profile_name = "scram_" .. hashprep(hash_name);
 	local function scram_hash(self, message)
 		local support_channel_binding = false;
@@ -101,8 +101,8 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb)
 			local client_first_message = message;
 
 			-- TODO: fail if authzid is provided, since we don't support them yet
-			local gs2_header, gs2_cbind_flag, gs2_cbind_name, authzid, client_first_message_bare, username, clientnonce
-				= s_match(client_first_message, "^(([pny])=?([^,]*),([^,]*),)(m?=?[^,]*,?n=([^,]*),r=([^,]*),?.*)$");
+			local gs2_header, gs2_cbind_flag, gs2_cbind_name, authzid, client_first_message_bare, username, clientnonce, extra
+				= s_match(client_first_message, "^(([pny])=?([^,]*),([^,]*),)(m?=?[^,]*,?n=([^,]*),r=([^,]*),?(.*))$");
 
 			if not gs2_cbind_flag then
 				return "failure", "malformed-request";
@@ -142,7 +142,28 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb)
 
 			-- retrieve credentials
 			local stored_key, server_key, salt, iteration_count;
-			if self.profile.plain then
+			if allow_mcf and self.profile.crypt and s_match(","..extra..",", ",f=y,") then
+				local mcf, status = self.profile.crypt(self, username, self.realm, authzid)
+				if status == nil then return "failure", "not-authorized"
+				elseif status == false then return "failure", "account-disabled" end
+				local nonce = clientnonce .. generate_uuid();
+				local mcf_prefix = s_match("^.*$[^$]+$");
+				local server_first_message = ("r=%s,f=%s"):format(nonce, base64.encode(mcf_prefix));
+				stored_key = H_f(HMAC_f(mcf, "Client Key"))
+				server_key = HMAC_f(mcf, "Server Key");
+				self.state = {
+					gs2_header = gs2_header;
+					gs2_cbind_name = gs2_cbind_name;
+					username = self.username; -- Reference property instead of local, in case it was modified by the profile
+					nonce = nonce;
+
+					server_key = server_key;
+					stored_key = stored_key;
+					client_first_message_bare = client_first_message_bare;
+					server_first_message = server_first_message;
+				}
+				return "challenge", server_first_message
+			elseif self.profile.plain then
 				local password, status = self.profile.plain(self, username, self.realm, authzid)
 				if status == nil then return "failure", "not-authorized"
 				elseif status == false then return "failure", "account-disabled" end
@@ -232,14 +253,15 @@ local function init(registerMechanism)
 	local function registerSCRAMMechanism(hash_name, hash, hmac_hash, pbkdf2)
 		local get_auth_db = get_scram_hasher(hash, hmac_hash, pbkdf2);
 		auth_db_getters[hash_name] = get_auth_db;
+		local allow_mcf = hash_name ~= "SHA-1" and "crypt" or nil;
 		registerMechanism("SCRAM-"..hash_name,
-			{"plain", "scram_"..(hashprep(hash_name))},
-			scram_gen(hash_name:lower(), hash, hmac_hash, get_auth_db));
+			{"plain", "scram_"..(hashprep(hash_name)), allow_mcf},
+			scram_gen(hash_name:lower(), hash, hmac_hash, get_auth_db, false, allow_mcf));
 
 		-- register channel binding equivalent
 		registerMechanism("SCRAM-"..hash_name.."-PLUS",
-			{"plain", "scram_"..(hashprep(hash_name))},
-			scram_gen(hash_name:lower(), hash, hmac_hash, get_auth_db, true), {"tls-unique", "tls-exporter"});
+			{"plain", "scram_"..(hashprep(hash_name)), allow_mcf},
+			scram_gen(hash_name:lower(), hash, hmac_hash, get_auth_db, true, allow_mcf), {"tls-unique", "tls-exporter"});
 	end
 
 	registerSCRAMMechanism("SHA-1", hashes.sha1, hashes.hmac_sha1, hashes.pbkdf2_hmac_sha1);
