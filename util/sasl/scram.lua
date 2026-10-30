@@ -147,7 +147,7 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_m
 				if status == nil then return "failure", "not-authorized"
 				elseif status == false then return "failure", "account-disabled" end
 				local nonce = clientnonce .. generate_uuid();
-				local mcf_prefix = s_match("^.*$[^$]+$");
+				local mcf_prefix = s_match(mcf, "^.*$[^$]+%$");
 				local server_first_message = ("r=%s,f=%s"):format(nonce, base64.encode(mcf_prefix));
 				stored_key = H_f(HMAC_f(mcf, "Client Key"))
 				server_key = HMAC_f(mcf, "Server Key");
