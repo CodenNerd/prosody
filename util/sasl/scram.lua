@@ -188,6 +188,8 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_m
 				stored_key, server_key, iteration_count, salt, status = self.profile[profile_name](self, username, self.realm, authzid);
 				if status == nil then return "failure", "not-authorized"
 				elseif status == false then return "failure", "account-disabled" end
+			else
+				return "failure", "not-authorized", "No profile handled the request";
 			end
 
 			local nonce = clientnonce .. generate_uuid();
