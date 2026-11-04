@@ -195,15 +195,22 @@ function handle_outbound_presence_subscriptions_and_probes(origin, stanza, from_
 		-- 1. route stanza
 		-- 2. roster_push ()
 		-- 3. send_presence_of_available_resources
-		if rostermanager.subscribed(node, host, to_bare) then
-			rostermanager.roster_push(node, host, to_bare);
-		end
-		if rostermanager.is_contact_subscribed(node, host, to_bare) then
-			core_post_stanza(origin, stanza);
-			send_presence_of_available_resources(node, host, to_bare, origin);
-		end
-		if rostermanager.is_user_subscribed(node, host, to_bare) then
-			core_post_stanza(origin, st.presence({ type = "probe", from = from_bare, to = to_bare }));
+		if not rostermanager.is_contact_subscribed(node, host, to_bare) then
+			local pending_in = rostermanager.is_contact_pending_in(node, host, to_bare);
+			if pending_in then
+				core_post_stanza(origin, stanza);
+			end
+
+			if rostermanager.subscribed(node, host, to_bare) then
+				rostermanager.roster_push(node, host, to_bare);
+			end
+
+			if pending_in then
+				send_presence_of_available_resources(node, host, to_bare, origin);
+				if rostermanager.is_user_subscribed(node, host, to_bare) then
+					core_post_stanza(origin, st.presence({ type = "probe", from = from_bare, to = to_bare }));
+				end
+			end
 		end
 	elseif stanza.attr.type == "unsubscribed" then
 		-- 1. send unavailable
@@ -247,7 +254,7 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 		end
 	elseif stanza.attr.type == "subscribe" then
 		if rostermanager.is_contact_subscribed(node, host, from_bare) then
-			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="subscribed"}), true); -- already subscribed
+			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="subscribed"})); -- already subscribed
 			-- Sending presence is not clearly stated in the RFC, but it seems appropriate
 			if 0 == send_presence_of_available_resources(node, host, from_bare, origin) then
 				core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unavailable"}), true); -- TODO send last activity
