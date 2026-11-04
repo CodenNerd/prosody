@@ -213,14 +213,14 @@ function handle_outbound_presence_subscriptions_and_probes(origin, stanza, from_
 		-- Is pending_in meant to be used?
 		local success, pending_in, subscribed, was_approved = rostermanager.unsubscribed(node, host, to_bare);
 		if success then
-			if subscribed or was_approved then
-				rostermanager.roster_push(node, host, to_bare);
+			if subscribed then
+				send_presence_of_available_resources(node, host, to_bare, origin, st.presence({ type = "unavailable" }));
 			end
 			if pending_in or subscribed then
 				core_post_stanza(origin, stanza);
 			end
-			if subscribed then
-				send_presence_of_available_resources(node, host, to_bare, origin, st.presence({ type = "unavailable" }));
+			if subscribed or was_approved then
+				rostermanager.roster_push(node, host, to_bare);
 			end
 		end
 	else
