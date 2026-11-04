@@ -267,9 +267,13 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 			end
 		end
 	elseif stanza.attr.type == "unsubscribe" then
+		local was_subscribed = rostermanager.is_contact_subscribed(node, host, from_bare);
 		if rostermanager.process_inbound_unsubscribe(node, host, from_bare) then
 			sessionmanager.send_to_interested_resources(node, host, stanza);
 			rostermanager.roster_push(node, host, from_bare);
+			if was_subscribed then
+				send_presence_of_available_resources(node, host, from_bare, origin, st.presence({type="unavailable"}));
+			end
 		end
 	elseif stanza.attr.type == "subscribed" then
 		if rostermanager.process_inbound_subscription_approval(node, host, from_bare) then
