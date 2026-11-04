@@ -281,7 +281,10 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 			if was_subscribed then
 				send_presence_of_available_resources(node, host, from_bare, origin, st.presence({type="unavailable"}));
 			end
+		elseif was_subscribed then
+			module:log("warn", "Failed to process inbound unsubscribe from <%s> for <%s@%s> - storage issue?", from_bare, node, host);
 		end
+		core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}));
 	elseif stanza.attr.type == "subscribed" then
 		if rostermanager.process_inbound_subscription_approval(node, host, from_bare) then
 			sessionmanager.send_to_interested_resources(node, host, stanza);
