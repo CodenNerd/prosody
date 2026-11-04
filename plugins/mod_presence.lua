@@ -408,11 +408,13 @@ module:hook("roster-item-removed", function (event)
 	local pending = roster and roster[false].pending[jid];
 
 	if subscription == "both" or subscription == "from" or pending then
+		if not pending then
+			send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
+		end
 		core_post_stanza(session, st.presence({type="unsubscribed", from=from_jid, to=jid}));
 	end
 
 	if subscription == "both" or subscription == "to" or ask then
-		send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
 		core_post_stanza(session, st.presence({type="unsubscribe", from=from_jid, to=jid}));
 	end
 
