@@ -91,9 +91,10 @@ module:hook("iq/self/jabber:iq:roster:query", function(event)
 					else
 						local r_item = {name = item.attr.name, groups = {}};
 						if r_item.name == "" then r_item.name = nil; end
-						if session.roster[jid] then
-							r_item.subscription = session.roster[jid].subscription;
-							r_item.ask = session.roster[jid].ask;
+						local current_item = session.roster[jid];
+						if current_item then
+							r_item.subscription = current_item.subscription;
+							r_item.ask = current_item.ask;
 						else
 							r_item.subscription = "none";
 						end
