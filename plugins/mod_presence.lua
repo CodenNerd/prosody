@@ -250,7 +250,7 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 				core_post_stanza(hosts[host], st.presence({from=to_bare, to=st_from, type="unavailable"}), true); -- TODO send last activity
 			end
 		elseif not err then
-			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}), true);
+			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}));
 		end
 	elseif stanza.attr.type == "subscribe" then
 		if rostermanager.is_contact_subscribed(node, host, from_bare) then
