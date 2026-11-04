@@ -95,6 +95,7 @@ module:hook("iq/self/jabber:iq:roster:query", function(event)
 						if current_item then
 							r_item.subscription = current_item.subscription;
 							r_item.ask = current_item.ask;
+							r_item.approved = current_item.approved;
 						else
 							r_item.subscription = "none";
 						end
