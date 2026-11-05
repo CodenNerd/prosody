@@ -412,19 +412,15 @@ end);
 module:hook("roster-item-removed", function (event)
 	local username = event.username;
 	local session = event.origin;
-	local roster = event.roster or session and session.roster;
 	local jid = event.jid;
 	local item = event.item;
 	local from_jid = username .. "@" .. module.host;
 
 	local subscription = item and item.subscription or "none";
 	local ask = item and item.ask;
-	local pending = roster and roster[false].pending[jid];
 
-	if subscription == "both" or subscription == "from" or pending then
-		if not pending then
-			send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
-		end
+	if subscription == "both" or subscription == "from" then
+		send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
 		core_post_stanza(session, st.presence({type="unsubscribed", from=from_jid, to=jid}));
 	end
 
