@@ -430,5 +430,10 @@ module:hook("roster-item-removed", function (event)
 		core_post_stanza(session, st.presence({type="unsubscribe", from=from_jid, to=jid}));
 	end
 
+	if not item then
+		-- This is reached when mod_roster handles user-deleted and is
+		-- cleaning up pending subscription requests
+		core_post_stanza(session, st.presence({type="unsubscribed", from=from_jid, to=jid}));
+	end
 end, -1);
 
