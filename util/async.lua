@@ -288,7 +288,7 @@ local function wait_for(promise)
 		function (e) err = e; end)
 		:finally(async_done);
 	async_wait();
-	if ret then
+	if ret ~= nil then
 		return ret;
 	else
 		return nil, err;
