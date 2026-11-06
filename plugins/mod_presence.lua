@@ -197,15 +197,22 @@ function handle_outbound_presence_subscriptions_and_probes(origin, stanza, from_
 		-- 1. route stanza
 		-- 2. roster_push ()
 		-- 3. send_presence_of_available_resources
-		if rostermanager.subscribed(node, host, to_bare) then
-			rostermanager.roster_push(node, host, to_bare);
-		end
-		if rostermanager.is_contact_subscribed(node, host, to_bare) then
-			core_post_stanza(origin, stanza);
-			send_presence_of_available_resources(node, host, to_bare, origin);
-		end
-		if rostermanager.is_user_subscribed(node, host, to_bare) then
-			core_post_stanza(origin, st.presence({ type = "probe", from = from_bare, to = to_bare }));
+		if not rostermanager.is_contact_subscribed(node, host, to_bare) then
+			local pending_in = rostermanager.is_contact_pending_in(node, host, to_bare);
+			if pending_in then
+				core_post_stanza(origin, stanza);
+			end
+
+			if rostermanager.subscribed(node, host, to_bare) then
+				rostermanager.roster_push(node, host, to_bare);
+			end
+
+			if pending_in then
+				send_presence_of_available_resources(node, host, to_bare, origin);
+				if rostermanager.is_user_subscribed(node, host, to_bare) then
+					core_post_stanza(origin, st.presence({ type = "probe", from = from_bare, to = to_bare }));
+				end
+			end
 		end
 	elseif stanza.attr.type == "unsubscribed" then
 		-- 1. send unavailable
@@ -213,14 +220,16 @@ function handle_outbound_presence_subscriptions_and_probes(origin, stanza, from_
 		-- 3. roster push (subscription = from or both)
 		-- luacheck: ignore 211/pending_in
 		-- Is pending_in meant to be used?
-		local success, pending_in, subscribed = rostermanager.unsubscribed(node, host, to_bare);
+		local success, pending_in, subscribed, was_approved = rostermanager.unsubscribed(node, host, to_bare);
 		if success then
 			if subscribed then
-				rostermanager.roster_push(node, host, to_bare);
-			end
-			core_post_stanza(origin, stanza);
-			if subscribed then
 				send_presence_of_available_resources(node, host, to_bare, origin, st.presence({ type = "unavailable" }));
+			end
+			if pending_in or subscribed then
+				core_post_stanza(origin, stanza);
+			end
+			if subscribed or was_approved then
+				rostermanager.roster_push(node, host, to_bare);
 			end
 		end
 	else
@@ -243,11 +252,11 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 				core_post_stanza(hosts[host], st.presence({from=to_bare, to=st_from, type="unavailable"}), true); -- TODO send last activity
 			end
 		elseif not err then
-			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}), true);
+			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}));
 		end
 	elseif stanza.attr.type == "subscribe" then
 		if rostermanager.is_contact_subscribed(node, host, from_bare) then
-			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="subscribed"}), true); -- already subscribed
+			core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="subscribed"})); -- already subscribed
 			-- Sending presence is not clearly stated in the RFC, but it seems appropriate
 			if 0 == send_presence_of_available_resources(node, host, from_bare, origin) then
 				core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unavailable"}), true); -- TODO send last activity
@@ -267,10 +276,17 @@ function handle_inbound_presence_subscriptions_and_probes(origin, stanza, from_b
 			end
 		end
 	elseif stanza.attr.type == "unsubscribe" then
+		local was_subscribed = rostermanager.is_contact_subscribed(node, host, from_bare);
 		if rostermanager.process_inbound_unsubscribe(node, host, from_bare) then
 			sessionmanager.send_to_interested_resources(node, host, stanza);
 			rostermanager.roster_push(node, host, from_bare);
+			if was_subscribed then
+				send_presence_of_available_resources(node, host, from_bare, origin, st.presence({type="unavailable"}));
+			end
+		elseif was_subscribed then
+			module:log("warn", "Failed to process inbound unsubscribe from <%s> for <%s@%s> - storage issue?", from_bare, node, host);
 		end
+		core_post_stanza(hosts[host], st.presence({from=to_bare, to=from_bare, type="unsubscribed"}));
 	elseif stanza.attr.type == "subscribed" then
 		if rostermanager.process_inbound_subscription_approval(node, host, from_bare) then
 			sessionmanager.send_to_interested_resources(node, host, stanza);
@@ -398,21 +414,19 @@ end);
 module:hook("roster-item-removed", function (event)
 	local username = event.username;
 	local session = event.origin;
-	local roster = event.roster or session and session.roster;
 	local jid = event.jid;
 	local item = event.item;
-	local from_jid = session.full_jid or (username .. "@" .. module.host);
+	local from_jid = username .. "@" .. module.host;
 
 	local subscription = item and item.subscription or "none";
 	local ask = item and item.ask;
-	local pending = roster and roster[false].pending[jid];
 
-	if subscription == "both" or subscription == "from" or pending then
+	if subscription == "both" or subscription == "from" then
+		send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
 		core_post_stanza(session, st.presence({type="unsubscribed", from=from_jid, to=jid}));
 	end
 
 	if subscription == "both" or subscription == "to" or ask then
-		send_presence_of_available_resources(username, module.host, jid, session, st.presence({type="unavailable"}));
 		core_post_stanza(session, st.presence({type="unsubscribe", from=from_jid, to=jid}));
 	end
 

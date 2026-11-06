@@ -377,6 +377,7 @@ local function unsubscribed(username, host, jid)
 		roster[false].pending[jid] = nil;
 	end
 	local is_subscribed;
+	local was_approved = item and item.approved;
 	if item then
 		if item.subscription == "from" then
 			item.subscription = "none";
@@ -385,9 +386,13 @@ local function unsubscribed(username, host, jid)
 			item.subscription = "to";
 			is_subscribed = true;
 		end
+		if was_approved then
+			-- Clear any subscription pre-approval, per RFC 6121 3.2.2
+			item.approved = nil;
+		end
 	end
-	local success = (pending or is_subscribed) and save_roster(username, host, roster, jid);
-	return success, pending, is_subscribed;
+	local success = (pending or is_subscribed or was_approved) and save_roster(username, host, roster, jid);
+	return success, pending, is_subscribed, was_approved;
 end
 
 local function process_outbound_subscription_request(username, host, jid)
