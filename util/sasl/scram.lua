@@ -88,6 +88,43 @@ local function get_scram_hasher(H, HMAC, Hi)
 	end
 end
 
+-- Known Modular Crypt Format prefixes and patterns for extracting salt but not hash
+-- [odd] = format prefix
+-- [even] = pattern matching everything including the salt but excluding the hash
+local mcf_prefixes = {
+	"$y$"; -- yescrypt
+	"^$y$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
+
+	"$gy$"; -- ghost-yescrypt
+	"^$gy$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
+
+	"$7$"; -- scrypt
+	"^$7$[./A-Za-z0-9]+%$";
+
+	"$2b$"; --bcrypt
+	"^$2[abxy]$[0-9][0-9]?$" .. ("[./A-Za-z0-9]"):rep(22);
+
+	"$6$"; --sha512crypt
+	"^$6$.*%$";
+
+	"$5$"; -- sha256crypt
+	"^$5$.*%$";
+
+	"$sha1"; -- sha1crypt
+	"^$sha1$[1-9][0-9]+$[./0-9A-Za-z]+%$";
+}
+
+-- Extract the algorithm identifier and salt but not the hash
+local function get_mcf_prefix_and_salt(s)
+	for i = 1, #mcf_prefixes, 2 do
+		local prefix = mcf_prefixes[i]
+		if s:sub(1, #prefix) == prefix then
+			local pattern = mcf_prefixes[i + 1]
+			return s:match(pattern);
+		end
+	end
+end
+
 local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_mcf)
 	local profile_name = "scram_" .. hashprep(hash_name);
 	local function scram_hash(self, message)
@@ -147,12 +184,10 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_m
 				if status == nil then return "failure", "not-authorized"
 				elseif status == false then return "failure", "account-disabled" end
 				local nonce = clientnonce .. generate_uuid();
-				local mcf_prefix = s_match(mcf, "^$.*%$");
-				if s_match(mcf, "^$2%w?%$") then
-					-- bcrypt has a fixed size salt with no $ separator
-					mcf_prefix = s_match(mcf, "^$2[abxy]?$[1-9]%d*$......................");
-				elseif not mcf_prefix then
-					log("debug", "Invalid credentials returned by crypt profile")
+
+				local mcf_prefix = get_mcf_prefix_and_salt(mcf);
+				if not mcf_prefix then
+					log("debug", "Invalid or unsupported credentials returned by Modular Crypt Format profile")
 					return "failure", "not-authorized";
 				end
 
