@@ -34,8 +34,8 @@ local function calculate_hash(disco_info)
 				if field.attr.var then
 					local values = {};
 					for val in field:childtags() do
-						val = not val:has_child_tags() and val:get_text();
-						if val then t_insert(values, val); end
+						local text = not val:has_child_tags() and val:get_text();
+						if text then t_insert(values, text); end
 					end
 					t_sort(values);
 					if field.attr.var == "FORM_TYPE" then
