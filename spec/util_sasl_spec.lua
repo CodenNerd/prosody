@@ -1,14 +1,13 @@
 local sasl = require "util.sasl";
 local json = require "util.json"
 local base64 = require "util.encodings".base64
+local sxor = require"util.strbitop".sxor;
+local Normalize = require"util.encodings".stringprep.saslprep;
 
 -- profile * mechanism
 -- callbacks could use spies instead
 
-local function test_scram(profile, name, H, HMAC, Hi)
-	local sxor = require"util.strbitop".sxor;
-	local Normalize = require"util.encodings".stringprep.saslprep;
-
+local function test_scram(profile, name, H, HMAC, Hi, extensions)
 	local plain = sasl.new("sasl.test", profile);
 	assert.truthy(plain:select("SCRAM-"..name));
 	local gs2_cbind_flag = "n";
@@ -17,18 +16,28 @@ local function test_scram(profile, name, H, HMAC, Hi)
 	local username = "n=" .. saslname;
 	local c_nonce = "fyko+d2lbbFgONRv9qkxdawL";
 	local nonce = "r=" .. c_nonce
-	local client_first_message_bare = username .. "," .. nonce;
+	local client_first_message_bare = username .. "," .. nonce .. (extensions and "," .. extensions or "");
 	local client_first_message = gs2_header .. client_first_message_bare
 	local first_status, server_first_message, err = plain:process(client_first_message);
 	assert.equals("challenge", first_status, err or server_first_message)
-	assert.matches("r=[^,]+,s=[^,]+,i=%d+", server_first_message);
+	assert.string(server_first_message);
+	local f = server_first_message:match("f=[^,]+")
+	if not f then
+		assert.matches("r=[^,]+,s=[^,]+,i=%d+", server_first_message);
+	else
+		assert.matches("r=[^,]+,f=[^,]+", server_first_message);
+	end
 	nonce = server_first_message:match("r=[^,]+")
-	local salt = server_first_message:match("s=[^,]+")
-	local iteration_count = server_first_message:match("i=[^,]+")
+	local salt = server_first_message:match("s=[^,]+") or ""
+	local iteration_count = server_first_message:match("i=[^,]+") or ""
 	assert.matches("r=", nonce)
 	assert.equal(c_nonce, nonce:sub(3, #c_nonce + 2))
-	assert.matches("s=", salt)
-	assert.matches("i=", iteration_count)
+	if f then
+		assert.matches("f=", f)
+	else
+		assert.matches("s=", salt)
+		assert.matches("i=", iteration_count)
+	end
 
 	local cbind_input = gs2_header;
 	local channel_binding = "c=" .. base64.encode(cbind_input)
@@ -37,6 +46,10 @@ local function test_scram(profile, name, H, HMAC, Hi)
 	local i = tonumber(iteration_count:sub(3))
 	local SaltedPassword, err = Hi(Normalize("pencil"), base64.decode(salt:sub(3)), i)
 	assert.truthy(SaltedPassword, err)
+	if f then
+		local mcf_salt =base64.decode(f:sub(3))
+		assert.equals(mcf_salt, SaltedPassword:sub(1,#mcf_salt))
+	end
 
 	local ClientKey = HMAC(SaltedPassword, "Client Key")
 	local StoredKey = H(ClientKey)
@@ -53,7 +66,7 @@ local function test_scram(profile, name, H, HMAC, Hi)
 	assert.equals("success", final_status, err or server_final_message)
 	assert.matches("v=[^,]+",server_final_message)
 	local verifier = server_final_message:match("v=[^,]+")
-	assert.equal(verifier, "v="..base64.encode(ServerSignature))
+	assert.equal(verifier, "v="..base64.encode(ServerSignature), "server signature matched")
 end
 
 describe("util.sasl", function ()
@@ -133,6 +146,31 @@ describe("util.sasl", function ()
 			test_scram(profile, "SHA-1", H, HMAC, Hi);
 		end)
 
+	end)
+
+	describe("crypt profile", function ()
+		local H = require"prosody.util.hashes".sha256;
+		local HMAC = require"prosody.util.hashes".hmac_sha256;
+		local Hi = function() return "$y$j75$00vQs9624O0VmZoU0ESJq.$tUzH7vku1hX8ejQOpggbysE18gt60o6p4.rMJD1CjN."; end
+
+		local profile = {
+			crypt = function (_, username, realm)
+				assert.equals("user", username)
+				assert.equals("sasl.test", realm)
+				return Hi(), true;
+			end
+		}
+		it("works with SCRAM-SHA-256", function ()
+			local crypt = sasl.new("sasl.test", profile);
+			assert.truthy(crypt:select("SCRAM-SHA-256"))
+			local status, server_first_message, err = crypt:process("n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,f=y")
+			assert.equals("challenge", status, err or server_first_message);
+			assert.string(server_first_message);
+			local f = server_first_message:match("^r=[^,]+,f=([^,]+)")
+			assert.equals("$y$j75$00vQs9624O0VmZoU0ESJq.$", base64.decode(f))
+
+			test_scram(profile, "SHA-256", H, HMAC, Hi, "f=y")
+		end)
 	end)
 
 	describe("oauthbearer profile", function()
