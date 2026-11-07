@@ -89,40 +89,50 @@ local function get_scram_hasher(H, HMAC, Hi)
 end
 
 -- Known Modular Crypt Format prefixes and patterns for extracting salt but not hash
--- [odd] = format prefix
--- [even] = pattern matching everything including the salt but excluding the hash
+
+-- The last $ should separate the salt from the hash, but doesn't always
+local generic_pattern = "^$.*%$"
+
+-- bcrypt has a fixed sized salt without separator
+local bcrypt_pattern = "^$2[abxy]$[0-9][0-9]?$" .. ("[./A-Za-z0-9]"):rep(22);
+
 local mcf_prefixes = {
-	"$y$"; -- yescrypt
-	"^$y$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
+	["argon2i"] = generic_pattern;
+	["argon2d"] = generic_pattern;
+	["argon2id"] = generic_pattern;
 
-	"$gy$"; -- ghost-yescrypt
-	"^$gy$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
+	-- yescrypt
+	["y"] = "^$y$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
 
-	"$7$"; -- scrypt
-	"^$7$[./A-Za-z0-9]+%$";
+	-- ghost-yescrypt
+	["gy"] = "^$gy$[./A-Za-z0-9]+$[./A-Za-z0-9]+%$";
 
-	"$2b$"; --bcrypt
-	"^$2[abxy]$[0-9][0-9]?$" .. ("[./A-Za-z0-9]"):rep(22);
+	-- scrypt
+	["7"] = "^$7$[./A-Za-z0-9]+%$";
+	["scrypt"] = generic_pattern;
 
-	"$6$"; --sha512crypt
-	"^$6$.*%$";
+	-- bcrypt
+	["2b"] = bcrypt_pattern;
+	["2a"] = bcrypt_pattern;
+	["2x"] = bcrypt_pattern;
+	["2y"] = bcrypt_pattern;
 
-	"$5$"; -- sha256crypt
-	"^$5$.*%$";
+	-- sha512crypt
+	["6"] = "^$6$.*%$";
 
-	"$sha1"; -- sha1crypt
-	"^$sha1$[1-9][0-9]+$[./0-9A-Za-z]+%$";
+	-- sha256crypt
+	["5"] = "^$5$.*%$";
+
+	-- sha1crypt
+	["sha1"] = "^$sha1$[1-9][0-9]+$[./0-9A-Za-z]+%$";
 }
 
 -- Extract the algorithm identifier and salt but not the hash
 local function get_mcf_prefix_and_salt(s)
-	for i = 1, #mcf_prefixes, 2 do
-		local prefix = mcf_prefixes[i]
-		if s:sub(1, #prefix) == prefix then
-			local pattern = mcf_prefixes[i + 1]
-			return s:match(pattern);
-		end
-	end
+	local algo = s:match("^$([^$]+)%$");
+	local pattern = mcf_prefixes[algo];
+	if not pattern then return end
+	return s:match(pattern)
 end
 
 local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_mcf)
