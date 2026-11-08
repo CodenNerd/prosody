@@ -302,7 +302,7 @@ static int Lgenerate_p256_keypair(lua_State *L) {
 	if (EVP_PKEY_keygen(pctx, &pkey) <= 0) goto err;
 	EVP_PKEY_CTX_free(pctx);
 
-	push_pkey(L, pkey, NID_X9_62_prime256v1, 1);
+	push_pkey(L, pkey, EVP_PKEY_id(pkey), 1);
 	return 1;
 
 err:

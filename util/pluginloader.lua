@@ -46,7 +46,7 @@ function pluginloader_methods:load_file(names)
 		end
 	end
 	if last_filter_err then
-		return nil, err..(" (%s skipped because of %s)"):format(last_filter_path, last_filter_err);
+		return nil, (err or "No suitable plugin found")..(" (%s skipped because of %s)"):format(last_filter_path, last_filter_err);
 	end
 	return file, err;
 end
