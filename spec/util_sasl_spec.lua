@@ -7,7 +7,7 @@ local Normalize = require"util.encodings".stringprep.saslprep;
 -- profile * mechanism
 -- callbacks could use spies instead
 
-local function test_scram(profile, name, H, HMAC, Hi, extensions)
+local function test_scram(profile, name, H, HMAC, Hi, extensions, bad_proof, expected_error)
 	local plain = sasl.new("sasl.test", profile);
 	assert.truthy(plain:select("SCRAM-"..name));
 	local gs2_cbind_flag = "n";
@@ -59,9 +59,15 @@ local function test_scram(profile, name, H, HMAC, Hi, extensions)
 	local ServerKey = HMAC(SaltedPassword, "Server Key")
 	local ServerSignature = HMAC(ServerKey, AuthMessage)
 
-	local proof = "p=" .. base64.encode(ClientProof)
+	local proof = "p=" .. (bad_proof and bad_proof(ClientProof) or base64.encode(ClientProof))
 	local client_final_message = client_final_message_without_proof .. "," .. proof;
 	local final_status, server_final_message, err = plain:process(client_final_message);
+
+	if bad_proof then
+		assert.equals("failure", final_status)
+		assert.equals(expected_error, server_final_message)
+		return
+	end
 
 	assert.equals("success", final_status, err or server_final_message)
 	assert.matches("v=[^,]+",server_final_message)
@@ -118,6 +124,29 @@ describe("util.sasl", function ()
 
 			test_scram(profile, "SHA-256", H, HMAC, Hi);
 		end)
+
+		for name, algo in pairs({ ["SHA-1"] = "sha1"; ["SHA-256"] = "sha256" }) do
+			local Hi = require"prosody.util.hashes"["pbkdf2_hmac_" .. algo];
+			local H = require"prosody.util.hashes"[algo];
+			local HMAC = require"prosody.util.hashes"["hmac_" .. algo];
+
+			for description, bad_proof in pairs({
+				["invalid base64"] = function () return "!" end;
+				["an empty"] = function () return "" end;
+				["a too short"] = function (proof) return base64.encode(proof:sub(2)) end;
+				["a too long"] = function (proof) return base64.encode(proof .. "\0") end;
+			}) do
+				it("rejects " .. description .. " proof with SCRAM-" .. name, function ()
+					test_scram(profile, name, H, HMAC, Hi, nil, bad_proof, "malformed-request");
+				end)
+			end
+
+			it("rejects an incorrect proof with SCRAM-" .. name, function ()
+				test_scram(profile, name, H, HMAC, Hi, nil, function (proof)
+					return base64.encode(("\0"):rep(#proof));
+				end, "not-authorized");
+			end)
+		end
 	end);
 
 	describe("scram_sha_1 profile", function()

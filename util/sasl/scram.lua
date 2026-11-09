@@ -289,7 +289,11 @@ local function scram_gen(hash_name, H_f, HMAC_f, get_auth_db, expect_cb, allow_m
 
 			local AuthMessage = state.client_first_message_bare .. "," .. state.server_first_message .. "," .. client_final_message_without_proof
 			local ClientSignature = HMAC_f(StoredKey, AuthMessage)
-			local ClientKey = binaryXOR(ClientSignature, base64.decode(proof))
+			local ClientProof = base64.decode(proof)
+			if not ClientProof or #ClientProof ~= #ClientSignature then
+				return "failure", "malformed-request", "Invalid client proof.";
+			end
+			local ClientKey = binaryXOR(ClientSignature, ClientProof)
 			local ServerSignature = HMAC_f(ServerKey, AuthMessage)
 
 			if StoredKey == H_f(ClientKey) then
