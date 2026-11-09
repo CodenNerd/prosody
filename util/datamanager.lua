@@ -23,6 +23,7 @@ local next = next;
 local type = type;
 local t_insert = table.insert;
 local t_concat = table.concat;
+local t_remove = table.remove;
 local envloadfile = require"prosody.util.envload".envloadfile;
 local envload = require"prosody.util.envload".envload;
 local serialize = require "prosody.util.serialization".serialize;
@@ -121,7 +122,7 @@ local function remove_callback(func)
 	if callbacks[func] then
 		for i, f in ipairs(callbacks) do
 			if f == func then
-				callbacks[i] = nil;
+				t_remove(callbacks, i);
 				callbacks[f] = nil;
 				return true;
 			end
