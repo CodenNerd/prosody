@@ -107,6 +107,11 @@ describe("util.dataforms", function ()
 				value = "text-single-value",
 			},
 			{
+				label = "default-type-label",
+				name = "default-type-field",
+				value = "default-type-value",
+			},
+			{
 				-- XEP-0221
 				-- TODO Validate the XML produced by this.
 				type = "text-single",
@@ -140,6 +145,24 @@ describe("util.dataforms", function ()
 		for tag in xform:childtags() do
 			assert.truthy(allowed_direct_children[tag.name], "unknown direct child");
 		end
+	end);
+
+	it("produced default type as text-single", function ()
+		local f;
+		for field in xform:childtags("field") do
+			if field.attr.var == "default-type-field" then
+				f = field;
+				break;
+			end
+		end
+
+		assert.truthy(st.is_stanza(f));
+		assert.equal("default-type-field", f.attr.var);
+		assert.equal("text-single", f.attr.type);
+		assert.equal("default-type-label", f.attr.label);
+		assert.equal(1, iter.count(f:childtags("value")));
+		local val = f:get_child_text("value");
+		assert.equal("default-type-value", val);
 	end);
 
 	it("produced boolean field correctly", function ()
@@ -333,6 +356,9 @@ describe("util.dataforms", function ()
 	describe(":data", function ()
 		it("returns something", function ()
 			assert.truthy(some_form:data(xform));
+		end);
+		it("uses text-single as default type", function ()
+			assert.equal("default-type-value", some_form:data(xform)["default-type-field"]);
 		end);
 	end);
 

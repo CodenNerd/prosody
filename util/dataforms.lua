@@ -193,7 +193,7 @@ function form_t.data(layout, stanza, current)
 			end
 		elseif field.name then
 			present[field.name] = true;
-			local reader = field_readers[field.type];
+			local reader = field_readers[field.type or "text-single"];
 			if reader then
 				local value, err = reader(tag, field.required);
 				local validator = field.datatype and data_validators[field.datatype];
